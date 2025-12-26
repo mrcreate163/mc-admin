@@ -83,7 +83,7 @@ public class UserService {
     public PageAccountDto getUsersPage(int page, int size) {
         try {
             UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromHttpUrl(gatewayUrl + "/account")
+                    .fromUriString(gatewayUrl + "/account")
                     .queryParam("page", page)
                     .queryParam("size", size)
                     .queryParam("sort", "regDate,desc");

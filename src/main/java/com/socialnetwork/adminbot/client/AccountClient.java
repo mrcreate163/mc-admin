@@ -83,7 +83,7 @@ public class AccountClient {
     public PageAccountDto getAccountsPage(int page, int size, String sort) {
         try {
             UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromHttpUrl(gatewayUrl + "/account")
+                    .fromUriString(gatewayUrl + "/account")
                     .queryParam("page", page)
                     .queryParam("size", size)
                     .queryParam("sort", sort);

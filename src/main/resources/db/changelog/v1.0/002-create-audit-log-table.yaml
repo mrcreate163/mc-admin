@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-audit-log-table
+      author: admin-bot-service
+      changes:
+        - createTable:
+            tableName: audit_log
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: admin_id
+                  type: BIGINT
+              - column:
+                  name: action_type
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_user_id
+                  type: UUID
+              - column:
+                  name: details
+                  type: JSONB
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: audit_log
+            baseColumnNames: admin_id
+            constraintName: fk_audit_log_admin
+            referencedTableName: admins
+            referencedColumnNames: id
+            onDelete: SET NULL

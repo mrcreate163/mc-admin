@@ -1,93 +1,224 @@
-# Mc Admin
+# Admin Bot Service
 
+Telegram bot admin panel microservice for social network (pet-project). Manages users and basic moderation through Telegram bot.
 
+## Technology Stack
 
-## Getting started
+- **Java 17**
+- **Spring Boot 4.0.1**
+- **Spring Web** (REST clients to Gateway)
+- **Spring Data JPA** + PostgreSQL
+- **Liquibase** (database migrations)
+- **Spring Data Redis** (state machine, cache)
+- **Spring Kafka** (for future versions)
+- **Eureka Client** (service discovery)
+- **Telegram Bots** (Java library)
+- **Maven**
+- **Docker** (containerization)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Architecture
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Classic three-layer architecture + separate Telegram layer:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.skillbox.ru/javapro_team59/mc-admin.git
-git branch -M master
-git push -uf origin master
+src/main/java/com/socialnetwork/adminbot/
+├── config/          - Configuration classes
+├── telegram/        - Telegram bot and handlers
+├── service/         - Business logic layer
+├── repository/      - Data access layer
+├── entity/          - JPA entities
+├── dto/             - Data transfer objects
+├── client/          - External service clients
+└── exception/       - Custom exceptions
 ```
 
-## Integrate with your tools
+## Features (v1.0 MVP)
 
-- [ ] [Set up project integrations](https://gitlab.skillbox.ru/javapro_team59/mc-admin/-/settings/integrations)
+### Telegram Commands
 
-## Collaborate with your team
+- `/start` - Show welcome message and main menu
+- `/user <user_id>` - View user information
+- `/ban <user_id>` - Block user
+- `/unban <user_id>` - Unblock user
+- `/stats` - View platform statistics
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### Admin Features
 
-## Test and Deploy
+- **User Management**: View user information, block/unblock users
+- **Statistics**: Total users, new users today, blocked users
+- **Audit Logging**: All admin actions are logged to database
+- **Inline Keyboards**: Interactive buttons for quick actions
+- **Authorization**: Whitelist-based admin access control
 
-Use the built-in continuous integration in GitLab.
+## Configuration
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Environment Variables
 
-***
+Create `.env` file or set environment variables:
 
-# Editing this README
+```bash
+# Database
+DB_HOST=localhost
+DB_NAME=social_network
+DB_USER=postgres
+DB_PASSWORD=password
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
 
-## Suggestions for a good README
+# Kafka
+KAFKA_SERVERS=localhost:9092
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# Eureka
+EUREKA_HOST=localhost
 
-## Name
-Choose a self-explaining name for your project.
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_BOT_USERNAME=your_bot_username
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+# Gateway
+GATEWAY_HOST=localhost
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+# Admin Whitelist (comma-separated Telegram user IDs)
+ADMIN_TELEGRAM_IDS=123456789,987654321
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Application Configuration
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+See `src/main/resources/application.yml` for full configuration.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Database Schema
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### admins table
+
+Stores administrator information:
+
+- `id` - Primary key
+- `telegram_user_id` - Telegram user ID (unique)
+- `username` - Telegram username
+- `first_name` - First name
+- `role` - Admin role (SUPER_ADMIN, ADMIN, MODERATOR)
+- `is_active` - Active status
+- `created_at` - Creation timestamp
+- `updated_at` - Update timestamp
+
+### audit_log table
+
+Stores audit logs of admin actions:
+
+- `id` - Primary key
+- `admin_id` - Reference to admin
+- `action_type` - Type of action performed
+- `target_user_id` - Target user UUID
+- `details` - Additional details (JSONB)
+- `created_at` - Action timestamp
+
+## Building and Running
+
+### Prerequisites
+
+- Java 17 or higher
+- Maven 3.6+
+- PostgreSQL 12+
+- Redis 6+
+- Kafka (optional for v1.0)
+
+### Build
+
+```bash
+./mvnw clean package
+```
+
+### Run
+
+```bash
+./mvnw spring-boot:run
+```
+
+### Run with Docker
+
+```bash
+# Build image
+docker build -t admin-bot-service .
+
+# Run container
+docker run -d \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e TELEGRAM_BOT_USERNAME=your_username \
+  -e DB_HOST=postgres \
+  -e REDIS_HOST=redis \
+  admin-bot-service
+```
+
+## Testing
+
+```bash
+# Run all tests
+./mvnw test
+
+# Run with coverage
+./mvnw test jacoco:report
+```
+
+## Integration with Services
+
+All external calls go through API Gateway at `gateway.url`:
+
+### Auth Service
+
+- `GET /auth/validate?token={token}` - Validate authentication token
+
+### Account Service
+
+- `GET /account/{id}` - Get account by ID
+- `PUT /account/block/{id}` - Block user
+- `PUT /account/unblock/{id}` - Unblock user
+- `GET /account?page=0&size=10&sort=regDate,desc` - Get paginated accounts
+
+## Development
+
+### Code Style
+
+- Use Lombok annotations: `@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`
+- Service methods with clear names: `getUserById()`, `blockUser()`, `logAction()`
+- Don't throw generic Exception, use specific RuntimeException
+- Telegram handlers should be thin, business logic in services
+- UUID for user IDs, Long for internal IDs
+- Log all important operations
+- All database operations in transactions (`@Transactional`)
+
+### Adding New Commands
+
+1. Create handler in `telegram/handler/` package
+2. Implement command logic calling services
+3. Register handler in `TelegramBot` class
+4. Add audit logging for the action
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### v1.0 (Current) ✅
+- Basic admin authentication (whitelist)
+- User management commands
+- Statistics
+- Audit logging
+- Inline keyboard menus
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### v2.0 (Planned)
+- Admin management via database
+- State machine with Redis
+- Enhanced statistics with charts
+- More moderation features
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### v3.0 (Planned)
+- Kafka integration for events
+- Real-time notifications
+- Advanced analytics
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This is a pet project for educational purposes.
+
+## Authors
+
+Pet project for social network

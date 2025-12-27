@@ -14,7 +14,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: admin_id
-                  type: BIGINT
+                  type: uuid
               - column:
                   name: action_type
                   type: VARCHAR(100)

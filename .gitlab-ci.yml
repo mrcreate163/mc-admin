@@ -56,8 +56,6 @@ test:
   rules:
     - if: $CI_COMMIT_BRANCH
     - if: $CI_MERGE_REQUEST_IID
-  tags:
-    - docker
 
 # ============================================================
 # СТАДИЯ: СБОРКА DOCKER ОБРАЗА
@@ -88,8 +86,6 @@ build:
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - test
-  tags:
-    - docker
 
 # ============================================================
 # СТАДИЯ: PUSH В DOCKER REGISTRY
@@ -132,8 +128,6 @@ push:
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - build
-  tags:
-    - docker
 
 # ============================================================
 # СТАДИЯ: ДЕПЛОЙ НА DEV СЕРВЕР
@@ -197,8 +191,6 @@ deploy:dev:
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - push
-  tags:
-    - docker
 
 # ============================================================
 # СТАДИЯ: ДЕПЛОЙ НА PRODUCTION (main ветка)
@@ -260,5 +252,3 @@ deploy:prod:
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - push
-  tags:
-    - docker

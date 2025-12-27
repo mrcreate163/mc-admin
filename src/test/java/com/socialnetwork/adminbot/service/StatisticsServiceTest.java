@@ -60,10 +60,11 @@ class StatisticsServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getTotalUsers()).isEqualTo(1500L);
         assertThat(result.getNewUsersToday()).isEqualTo(50L);
-        // MVP version - these are placeholder values
-        assertThat(result.getActiveUsers()).isEqualTo(0L);
-        assertThat(result.getBlockedUsers()).isEqualTo(0L);
-        assertThat(result.getTotalAdmins()).isEqualTo(0L);
+        // In v1.0 MVP, these values return 0 as they will be implemented in v2.0
+        // when Account Service provides these aggregated statistics
+        assertThat(result.getActiveUsers()).isZero();
+        assertThat(result.getBlockedUsers()).isZero();
+        assertThat(result.getTotalAdmins()).isZero();
     }
 
     @Test

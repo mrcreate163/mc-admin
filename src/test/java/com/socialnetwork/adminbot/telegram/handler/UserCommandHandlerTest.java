@@ -4,6 +4,7 @@ import com.socialnetwork.adminbot.dto.AccountDto;
 import com.socialnetwork.adminbot.exception.UserNotFoundException;
 import com.socialnetwork.adminbot.service.AuditLogService;
 import com.socialnetwork.adminbot.service.UserService;
+import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -138,6 +139,7 @@ class UserCommandHandlerTest {
 
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.getText()).contains("✅ Да"); // Заблокирован: Да
+        // Check that blocked status is shown - using constant from BotMessage
+        assertThat(result.getText()).contains(BotMessage.STATUS_YES.raw());
     }
 }

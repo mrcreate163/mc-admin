@@ -37,15 +37,10 @@ public class BanCommandHandler {
             UUID userId = UUID.fromString(parts[1]);
 
             // Блокируем пользователя
-            userService.blockUser(userId);
+            userService.blockUser(userId, adminTelegramId, "Manual ban");
 
             // Логируем действие
-            auditLogService.log(
-                    adminTelegramId,
-                    "BLOCK_USER",
-                    userId,
-                    Map.of("reason", "Manual ban")
-            );
+            auditLogService.logAction("BLOCK_USER", adminTelegramId, userId, Map.of("reason", "Manual ban").toString());
 
             // Возвращаем успешное сообщение
             return new SendMessage(
@@ -87,15 +82,10 @@ public class BanCommandHandler {
             UUID userId = UUID.fromString(parts[1]);
 
             // Разблокируем пользователя
-            userService.unblockUser(userId);
+            userService.unblockUser(userId, adminTelegramId);
 
             // Логируем действие
-            auditLogService.log(
-                    adminTelegramId,
-                    "UNBLOCK_USER",
-                    userId,
-                    Map.of("reason", "Manual unban")
-            );
+            auditLogService.logAction("UNBLOCK_USER", adminTelegramId, userId, Map.of("reason", "Manual unban").toString());
 
             // Возвращаем успешное сообщение
             return new SendMessage(

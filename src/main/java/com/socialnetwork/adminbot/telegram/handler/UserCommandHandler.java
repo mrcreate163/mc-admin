@@ -40,7 +40,11 @@ public class UserCommandHandler {
             AccountDto account = userService.getUserById(userId);
 
             // Логируем действие администратора
-            auditLogService.log(adminTelegramId, "VIEW_USER", userId, Map.of());
+            auditLogService.logAction(
+                    "VIEW_USER_INFO",
+                    adminTelegramId,
+                    Map.of("userId", userId.toString())
+            );
 
             // Строим сообщение с информацией
             return buildUserInfoMessage(message.getChatId(), account);

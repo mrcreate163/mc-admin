@@ -24,7 +24,7 @@ public class StatsCommandHandler {
             StatisticsDto stats = statisticsService.getStatistics();
 
             // Логируем просмотр статистики
-            auditLogService.log(adminTelegramId, "VIEW_STATS", Map.of());
+            auditLogService.logAction("VIEW_STATS", adminTelegramId, Map.of());
 
             // Формируем текст со статистикой
             String text = String.join("\n",

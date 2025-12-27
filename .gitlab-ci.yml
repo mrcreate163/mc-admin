@@ -18,7 +18,7 @@ variables:
   # Тег образа (по умолчанию - latest)
   DOCKER_TAG: latest
   # Java версия
-  JAVA_VERSION: "17"
+  JAVA_VERSION: "21"
   # Maven настройки
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
@@ -179,6 +179,12 @@ deploy:dev:
         
         echo "🧹 Cleaning up old images..."
         docker image prune -f
+        echo "🧹 Removing old mc-admin images, keep last 2..."
+        docker images "mlz777/mc-admin" --format "{{.ID}} {{.CreatedAt}}" \\
+          | sort -k2,3 -r \
+          | tail -n +3 \
+          | awk '{print $1}' \
+          | xargs -r docker rmi || true
         
         echo "✅ Deployment complete!"
         docker ps | grep mc-admin
@@ -238,7 +244,13 @@ deploy:prod:
         
         echo "🧹 Cleaning up old images..."
         docker image prune -f
-        
+        echo "🧹 Removing old mc-admin images, keep last 2..."
+        docker images "mlz777/mc-admin" --format "{{.ID}} {{.CreatedAt}}" \\
+          | sort -k2,3 -r \
+          | tail -n +3 \
+          | awk '{print $1}' \
+          | xargs -r docker rmi || true
+      
         echo "✅ Production deployment complete!"
         docker ps | grep mc-admin
       EOF

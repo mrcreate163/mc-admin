@@ -1,224 +1,386 @@
 # Admin Bot Service
 
-Telegram bot admin panel microservice for social network (pet-project). Manages users and basic moderation through Telegram bot.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Java Version](https://img.shields.io/badge/Java-17-orange)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.1-green)]()
+[![License](https://img.shields.io/badge/License-MIT-blue)]()
 
-## Technology Stack
+Telegram-бот для администрирования социальной сети. Микросервис обеспечивает управление пользователями и базовую модерацию через Telegram-бота.
 
-- **Java 17**
-- **Spring Boot 4.0.1**
-- **Spring Web** (REST clients to Gateway)
-- **Spring Data JPA** + PostgreSQL
-- **Liquibase** (database migrations)
-- **Spring Data Redis** (state machine, cache)
-- **Spring Kafka** (for future versions)
-- **Eureka Client** (service discovery)
-- **Telegram Bots** (Java library)
-- **Maven**
-- **Docker** (containerization)
+## 📋 Содержание
 
-## Architecture
+- [Технологический стек](#технологический-стек)
+- [Архитектура](#архитектура)
+- [Возможности](#возможности-v10-mvp)
+- [Быстрый старт](#быстрый-старт)
+- [Конфигурация](#конфигурация)
+- [База данных](#база-данных)
+- [Тестирование](#тестирование)
+- [Развёртывание](#развёртывание)
+- [API интеграция](#интеграция-с-сервисами)
+- [Разработка](#разработка)
+- [Roadmap](#roadmap)
 
-Classic three-layer architecture + separate Telegram layer:
+## 🛠 Технологический стек
+
+| Категория | Технология |
+|-----------|------------|
+| **Язык** | Java 17 |
+| **Фреймворк** | Spring Boot 4.0.1 |
+| **Web** | Spring Web (REST клиенты) |
+| **Данные** | Spring Data JPA + PostgreSQL |
+| **Миграции** | Liquibase |
+| **Кеш** | Spring Data Redis |
+| **Сообщения** | Spring Kafka (для v2.0+) |
+| **Telegram** | TelegramBots 6.9.7.1 |
+| **Сборка** | Maven |
+| **Контейнеризация** | Docker |
+| **CI/CD** | GitLab CI |
+
+## 🏗 Архитектура
+
+Классическая трёхслойная архитектура с выделенным слоем для Telegram:
 
 ```
 src/main/java/com/socialnetwork/adminbot/
-├── config/          - Configuration classes
-├── telegram/        - Telegram bot and handlers
-├── service/         - Business logic layer
-├── repository/      - Data access layer
-├── entity/          - JPA entities
-├── dto/             - Data transfer objects
-├── client/          - External service clients
-└── exception/       - Custom exceptions
+├── config/          # Конфигурация Spring beans
+│   ├── RedisConfig.java
+│   ├── RestTemplateConfig.java
+│   └── TelegramBotConfig.java
+├── telegram/        # Telegram бот и обработчики
+│   ├── handler/     # Обработчики команд
+│   ├── keyboard/    # Inline клавиатуры
+│   ├── messages/    # Шаблоны сообщений
+│   └── TelegramBot.java
+├── service/         # Бизнес-логика
+│   ├── AdminService.java
+│   ├── UserService.java
+│   ├── StatisticsService.java
+│   └── AuditLogService.java
+├── repository/      # Слой доступа к данным
+├── entity/          # JPA сущности
+├── dto/             # Data Transfer Objects
+├── client/          # HTTP клиенты внешних сервисов
+└── exception/       # Кастомные исключения
 ```
 
-## Features (v1.0 MVP)
+### Схема взаимодействия
 
-### Telegram Commands
-
-- `/start` - Show welcome message and main menu
-- `/user <user_id>` - View user information
-- `/ban <user_id>` - Block user
-- `/unban <user_id>` - Unblock user
-- `/stats` - View platform statistics
-
-### Admin Features
-
-- **User Management**: View user information, block/unblock users
-- **Statistics**: Total users, new users today, blocked users
-- **Audit Logging**: All admin actions are logged to database
-- **Inline Keyboards**: Interactive buttons for quick actions
-- **Authorization**: Whitelist-based admin access control
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` file or set environment variables:
-
-```bash
-# Database
-DB_HOST=localhost
-DB_NAME=social_network
-DB_USER=postgres
-DB_PASSWORD=password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Kafka
-KAFKA_SERVERS=localhost:9092
-
-# Eureka
-EUREKA_HOST=localhost
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_BOT_USERNAME=your_bot_username
-
-# Gateway
-GATEWAY_HOST=localhost
-
-# Admin Whitelist (comma-separated Telegram user IDs)
-ADMIN_TELEGRAM_IDS=123456789,987654321
+```
+┌──────────────┐      ┌──────────────────┐      ┌──────────────────┐
+│   Telegram   │ ───► │  Admin Bot       │ ───► │  mc-account      │
+│   Bot API    │ ◄─── │  Service         │ ◄─── │  (User Service)  │
+└──────────────┘      └──────────────────┘      └──────────────────┘
+                              │
+                              ▼
+                      ┌──────────────────┐
+                      │   PostgreSQL     │
+                      │   (admins,       │
+                      │    audit_log)    │
+                      └──────────────────┘
 ```
 
-### Application Configuration
+## ⭐ Возможности (v1.0 MVP)
 
-See `src/main/resources/application.yml` for full configuration.
+### Telegram команды
 
-## Database Schema
+| Команда | Описание |
+|---------|----------|
+| `/start` | Приветственное сообщение и главное меню |
+| `/user <id>` | Просмотр информации о пользователе |
+| `/ban <id>` | Заблокировать пользователя |
+| `/unban <id>` | Разблокировать пользователя |
+| `/stats` | Статистика платформы |
 
-### admins table
+### Функции администратора
 
-Stores administrator information:
+- ✅ **Управление пользователями**: просмотр, блокировка/разблокировка
+- ✅ **Статистика**: общее количество, новые за сегодня, заблокированные
+- ✅ **Аудит**: все действия администраторов логируются в БД
+- ✅ **Inline-клавиатуры**: интерактивные кнопки для быстрых действий
+- ✅ **Авторизация**: доступ на основе whitelist Telegram ID
 
-- `id` - Primary key
-- `telegram_user_id` - Telegram user ID (unique)
-- `username` - Telegram username
-- `first_name` - First name
-- `role` - Admin role (SUPER_ADMIN, ADMIN, MODERATOR)
-- `is_active` - Active status
-- `created_at` - Creation timestamp
-- `updated_at` - Update timestamp
+## 🚀 Быстрый старт
 
-### audit_log table
+### Требования
 
-Stores audit logs of admin actions:
-
-- `id` - Primary key
-- `admin_id` - Reference to admin
-- `action_type` - Type of action performed
-- `target_user_id` - Target user UUID
-- `details` - Additional details (JSONB)
-- `created_at` - Action timestamp
-
-## Building and Running
-
-### Prerequisites
-
-- Java 17 or higher
+- Java 17+
 - Maven 3.6+
-- PostgreSQL 12+
-- Redis 6+
-- Kafka (optional for v1.0)
+- PostgreSQL 15+
+- Redis 7+
+- Docker (опционально)
 
-### Build
-
-```bash
-./mvnw clean package
-```
-
-### Run
+### Локальный запуск
 
 ```bash
+# 1. Клонирование репозитория
+git clone https://github.com/your-org/mc-admin.git
+cd mc-admin
+
+# 2. Запуск инфраструктуры
+docker-compose up -d postgres redis
+
+# 3. Сборка проекта
+./mvnw clean package -DskipTests
+
+# 4. Запуск приложения
 ./mvnw spring-boot:run
 ```
 
-### Run with Docker
+### Запуск в Docker
 
 ```bash
-# Build image
+# Сборка образа
 docker build -t admin-bot-service .
 
-# Run container
+# Запуск контейнера
 docker run -d \
+  --name admin-bot \
+  --network social-network-net \
   -e TELEGRAM_BOT_TOKEN=your_token \
-  -e TELEGRAM_BOT_USERNAME=your_username \
-  -e DB_HOST=postgres \
-  -e REDIS_HOST=redis \
+  -e TELEGRAM_BOT_USERNAME=your_bot \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
+  -e SPRING_DATASOURCE_PASSWORD=your_password \
   admin-bot-service
 ```
 
-## Testing
+### Docker Compose (полный стек)
 
 ```bash
-# Run all tests
+docker-compose up -d
+```
+
+## ⚙️ Конфигурация
+
+### Переменные окружения
+
+| Переменная | Описание | По умолчанию |
+|------------|----------|--------------|
+| `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | `jdbc:postgresql://postgres:5432/admin_bot_db` |
+| `SPRING_DATASOURCE_USERNAME` | Пользователь БД | `postgres` |
+| `SPRING_DATASOURCE_PASSWORD` | Пароль БД | - |
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram бота | - |
+| `TELEGRAM_BOT_USERNAME` | Username бота | - |
+| `ADMIN_WHITELIST` | Список Telegram ID администраторов | `123456789` |
+| `ACCOUNT_SERVICE_URL` | URL сервиса аккаунтов | `http://mc-account:8080/internal/account` |
+
+### Пример .env файла
+
+```bash
+# База данных
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/admin_bot_db
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=your_password
+
+# Telegram бот
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_BOT_USERNAME=YourBotUsername
+
+# Администраторы (Telegram ID через запятую)
+ADMIN_WHITELIST=123456789,987654321
+
+# Сервис аккаунтов
+ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account
+```
+
+## 🗄 База данных
+
+### Таблица `admins`
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| `id` | UUID | Первичный ключ |
+| `telegram_user_id` | BIGINT | Telegram ID (уникальный) |
+| `username` | VARCHAR(255) | Telegram username |
+| `first_name` | VARCHAR(255) | Имя |
+| `role` | VARCHAR(50) | Роль (SUPER_ADMIN, ADMIN, MODERATOR) |
+| `is_active` | BOOLEAN | Активен |
+| `created_at` | TIMESTAMP | Дата создания |
+| `updated_at` | TIMESTAMP | Дата обновления |
+
+### Таблица `audit_log`
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| `id` | UUID | Первичный ключ |
+| `admin_id` | BIGINT | Telegram ID администратора |
+| `action_type` | VARCHAR(100) | Тип действия |
+| `target_user_id` | UUID | ID целевого пользователя |
+| `details` | JSONB | Дополнительные данные |
+| `created_at` | TIMESTAMP | Время действия |
+
+### Миграции
+
+Миграции управляются через Liquibase:
+
+```
+src/main/resources/db/changelog/
+├── db.changelog-master.yaml
+└── v1.0/
+    ├── 001-create-admins-table.yaml
+    └── 002-create-audit-log-table.yaml
+```
+
+## 🧪 Тестирование
+
+### Запуск тестов
+
+```bash
+# Все тесты
 ./mvnw test
 
-# Run with coverage
+# Конкретный тест класс
+./mvnw test -Dtest=AdminServiceTest
+
+# С отчётом о покрытии
 ./mvnw test jacoco:report
 ```
 
-## Integration with Services
+### Структура тестов
 
-All external calls go through API Gateway at `gateway.url`:
+```
+src/test/java/com/socialnetwork/adminbot/
+├── AdminBotApplicationTests.java    # Интеграционный тест контекста
+├── client/
+│   └── AccountClientTest.java       # Тесты HTTP клиента
+├── service/
+│   ├── AdminServiceTest.java        # Тесты сервиса админов
+│   ├── UserServiceTest.java         # Тесты сервиса пользователей
+│   ├── AuditLogServiceTest.java     # Тесты аудит логов
+│   └── StatisticsServiceTest.java   # Тесты статистики
+├── telegram/handler/
+│   ├── StartCommandHandlerTest.java
+│   ├── UserCommandHandlerTest.java
+│   ├── BanCommandHandlerTest.java
+│   └── StatsCommandHandlerTest.java
+├── telegram/messages/
+│   └── BotMessageTest.java          # Тесты шаблонов сообщений
+└── dto/
+    └── DtoTest.java                 # Тесты DTO
+```
 
-### Auth Service
+**Текущее покрытие: 66 тестов**
 
-- `GET /auth/validate?token={token}` - Validate authentication token
+## 🚢 Развёртывание
 
-### Account Service
+### GitLab CI/CD
 
-- `GET /account/{id}` - Get account by ID
-- `PUT /account/block/{id}` - Block user
-- `PUT /account/unblock/{id}` - Unblock user
-- `GET /account?page=0&size=10&sort=regDate,desc` - Get paginated accounts
+Проект использует GitLab CI/CD для автоматизации сборки и деплоя. Файл `.gitlab-ci.yml` находится в корне проекта.
 
-## Development
+**Стадии пайплайна:**
+
+1. **test** - Запуск unit-тестов
+2. **build** - Сборка Docker образа
+3. **push** - Отправка образа в Docker Registry
+4. **deploy** - Развёртывание на сервере
+
+### Необходимые GitLab Variables
+
+| Переменная | Описание |
+|------------|----------|
+| `DOCKER_HUB_USER` | Пользователь Docker Hub |
+| `DOCKER_HUB_TOKEN` | Токен Docker Hub |
+| `DEV_SERVER_HOST` | Хост сервера для деплоя |
+| `DEV_SERVER_USER` | SSH пользователь |
+| `SSH_PRIVATE_KEY` | SSH приватный ключ |
+| `POSTGRES_PASSWORD` | Пароль PostgreSQL |
+| `REDIS_PASSWORD` | Пароль Redis |
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram бота |
+| `TELEGRAM_BOT_USERNAME` | Username бота |
+| `ADMIN_WHITELIST` | Список Telegram ID админов |
+
+### Ручной деплой
+
+```bash
+# На сервере
+docker pull your-registry/admin-bot-service:latest
+
+docker stop admin-bot || true
+docker rm admin-bot || true
+
+docker run -d \
+  --name admin-bot \
+  --network social-network-net \
+  --restart unless-stopped \
+  -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN \
+  -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
+  your-registry/admin-bot-service:latest
+```
+
+## 🔗 Интеграция с сервисами
+
+### Account Service (mc-account)
+
+Все запросы идут на internal API:
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/internal/account/{id}` | Получить аккаунт по ID |
+| PUT | `/internal/account/block/{id}` | Заблокировать аккаунт |
+| DELETE | `/internal/account/block/{id}` | Разблокировать аккаунт |
+| GET | `/internal/account?page=0&size=10` | Список аккаунтов |
+
+## 💻 Разработка
 
 ### Code Style
 
-- Use Lombok annotations: `@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`
-- Service methods with clear names: `getUserById()`, `blockUser()`, `logAction()`
-- Don't throw generic Exception, use specific RuntimeException
-- Telegram handlers should be thin, business logic in services
-- UUID for user IDs, Long for internal IDs
-- Log all important operations
-- All database operations in transactions (`@Transactional`)
+- Используйте Lombok: `@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`
+- Осмысленные имена методов: `getUserById()`, `blockUser()`, `logAction()`
+- Не бросайте `Exception`, используйте специфичные `RuntimeException`
+- Telegram handlers должны быть "тонкими", бизнес-логика в сервисах
+- UUID для ID пользователей, Long для внутренних ID
+- Логируйте важные операции
+- `@Transactional` для операций с БД
 
-### Adding New Commands
+### Добавление новой команды
 
-1. Create handler in `telegram/handler/` package
-2. Implement command logic calling services
-3. Register handler in `TelegramBot` class
-4. Add audit logging for the action
+1. Создайте handler в `telegram/handler/`
+2. Реализуйте логику, вызывая сервисы
+3. Зарегистрируйте handler в `TelegramBot.java`
+4. Добавьте аудит логирование
+5. Добавьте константы сообщений в `BotMessage.java`
+6. Напишите тесты
 
-## Roadmap
+### Структура коммитов
 
-### v1.0 (Current) ✅
-- Basic admin authentication (whitelist)
-- User management commands
-- Statistics
-- Audit logging
-- Inline keyboard menus
+```
+feat: добавлена команда /search
+fix: исправлена ошибка парсинга UUID
+refactor: оптимизация StatisticsService
+test: добавлены тесты для CallbackQueryHandler
+docs: обновлён README
+```
 
-### v2.0 (Planned)
-- Admin management via database
-- State machine with Redis
-- Enhanced statistics with charts
-- More moderation features
+## 🗺 Roadmap
 
-### v3.0 (Planned)
-- Kafka integration for events
-- Real-time notifications
-- Advanced analytics
+### v1.0 (Текущая) ✅
 
-## License
+- [x] Базовая аутентификация (whitelist)
+- [x] Команды управления пользователями
+- [x] Статистика платформы
+- [x] Аудит логирование
+- [x] Inline-клавиатуры
+- [x] Unit-тестирование
 
-This is a pet project for educational purposes.
+### v2.0 (Планируется)
 
-## Authors
+- [ ] Управление администраторами через БД
+- [ ] State Machine через Redis
+- [ ] Расширенная статистика с графиками
+- [ ] Дополнительные функции модерации
+- [ ] Поиск пользователей
 
-Pet project for social network
+### v3.0 (Планируется)
+
+- [ ] Интеграция с Kafka для событий
+- [ ] Real-time уведомления
+- [ ] Продвинутая аналитика
+- [ ] Поддержка нескольких языков
+
+## 📄 Лицензия
+
+MIT License - Pet project для изучения микросервисной архитектуры.
+
+## 👥 Авторы
+
+Pet project для социальной сети

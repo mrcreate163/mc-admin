@@ -1,6 +1,24 @@
-REDIS_PASSWORD
-POSTGRES_PASSWORD
-DOCKER_HUB_USER
-DEV_SERVER_USER
-DEV_SERVER_HOST
-SSH_PRIVATE_KEY
+# GitLab CI/CD Variables
+# Эти переменные должны быть настроены в GitLab: Settings → CI/CD → Variables
+
+# Docker Hub
+DOCKER_HUB_USER          # Пользователь Docker Hub
+DOCKER_HUB_TOKEN         # Токен/пароль Docker Hub (masked)
+
+# Сервер для деплоя
+DEV_SERVER_HOST          # IP адрес или хост сервера
+DEV_SERVER_USER          # SSH пользователь
+SSH_PRIVATE_KEY          # SSH приватный ключ (masked, type: file)
+
+# База данных
+POSTGRES_PASSWORD        # Пароль PostgreSQL (masked)
+
+# Redis
+REDIS_PASSWORD           # Пароль Redis (masked)
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN       # Токен Telegram бота (masked)
+TELEGRAM_BOT_USERNAME    # Username бота (например: SocialNetworkAdminBot)
+
+# Администраторы
+ADMIN_WHITELIST          # Telegram ID администраторов через запятую (например: 123456789,987654321)

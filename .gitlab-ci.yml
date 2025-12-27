@@ -84,7 +84,7 @@ build:
       - image.tar
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - test
@@ -128,7 +128,7 @@ push:
   after_script:
     - docker logout
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - build
@@ -193,10 +193,8 @@ deploy:dev:
     name: development
     url: http://$DEV_SERVER_HOST:8090
   rules:
+    - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
-      when: manual
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: manual
   needs:
     - push
   tags:
@@ -258,8 +256,8 @@ deploy:prod:
     name: production
     url: http://$DEV_SERVER_HOST:8090
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: manual
+    - if: $CI_COMMIT_BRANCH == "master"  # было "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
   needs:
     - push
   tags:

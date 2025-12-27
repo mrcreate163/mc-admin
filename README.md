@@ -328,7 +328,7 @@ docker run -d \
 - Осмысленные имена методов: `getUserById()`, `blockUser()`, `logAction()`
 - Не бросайте `Exception`, используйте специфичные `RuntimeException`
 - Telegram handlers должны быть "тонкими", бизнес-логика в сервисах
-- UUID для ID пользователей, Long для внутренних ID
+- UUID для ID пользователей, UUID для внутренних ID
 - Логируйте важные операции
 - `@Transactional` для операций с БД
 

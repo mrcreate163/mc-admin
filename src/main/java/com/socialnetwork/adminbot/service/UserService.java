@@ -1,19 +1,12 @@
 package com.socialnetwork.adminbot.service;
 
+import static com.socialnetwork.adminbot.constant.AuditActionType.*;
+import com.socialnetwork.adminbot.client.AccountClient;
 import com.socialnetwork.adminbot.dto.AccountDto;
 import com.socialnetwork.adminbot.dto.PageAccountDto;
-import com.socialnetwork.adminbot.exception.GatewayException;
-import com.socialnetwork.adminbot.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
 
@@ -22,88 +15,76 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final RestTemplate restTemplate;
+    private final AccountClient accountClient;
+    private final AuditLogService auditLogService;
 
-    @Value("${gateway.url}")
-    private String gatewayUrl;
-
+    /**
+     * Получить пользователя по ID
+     *
+     * @param userId UUID пользователя
+     * @return AccountDto с информацией о пользователе
+     */
     public AccountDto getUserById(UUID userId) {
-        try {
-            ResponseEntity<AccountDto> response = restTemplate.getForEntity(
-                    gatewayUrl + "/account/" + userId,
-                    AccountDto.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            throw new UserNotFoundException("User not found: " + userId);
-
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new UserNotFoundException("User not found: " + userId);
-        } catch (HttpServerErrorException e) {
-            log.error("Gateway error: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway error: " + e.getMessage());
-        } catch (ResourceAccessException e) {
-            log.error("Gateway unavailable: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway unavailable");
-        }
+        log.debug("Getting user by ID: {}", userId);
+        return accountClient.getAccountById(userId);
     }
 
-    public void blockUser(UUID userId) {
-        try {
-            restTemplate.put(gatewayUrl + "/account/block/" + userId, null);
-            log.info("User blocked: userId={}", userId);
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new UserNotFoundException("User not found: " + userId);
-        } catch (HttpServerErrorException e) {
-            log.error("Gateway error: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway error: " + e.getMessage());
-        } catch (ResourceAccessException e) {
-            log.error("Gateway unavailable: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway unavailable");
-        }
+    /**
+     * Заблокировать пользователя
+     *
+     * @param userId UUID пользователя для блокировки
+     * @param adminTelegramId Telegram ID администратора
+     * @param reason причина блокировки (опционально)
+     */
+    public void blockUser(UUID userId, Long adminTelegramId, String reason) {
+        log.info("Blocking user {} by admin {}, reason: {}", userId, adminTelegramId, reason);
+
+        // Блокируем пользователя через AccountClient
+        accountClient.blockAccount(userId);
+
+        // Логируем действие в audit log
+        auditLogService.logAction(
+                BLOCK_USER,
+                adminTelegramId,
+                userId,
+                reason
+        );
+
+        log.info("User {} successfully blocked by admin {}", userId, adminTelegramId);
     }
 
-    public void unblockUser(UUID userId) {
-        try {
-            restTemplate.put(gatewayUrl + "/account/unblock/" + userId, null);
-            log.info("User unblocked: userId={}", userId);
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new UserNotFoundException("User not found: " + userId);
-        } catch (HttpServerErrorException e) {
-            log.error("Gateway error: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway error: " + e.getMessage());
-        } catch (ResourceAccessException e) {
-            log.error("Gateway unavailable: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway unavailable");
-        }
+    /**
+     * Разблокировать пользователя
+     *
+     * @param userId UUID пользователя для разблокировки
+     * @param adminTelegramId Telegram ID администратора
+     */
+    public void unblockUser(UUID userId, Long adminTelegramId) {
+        log.info("Unblocking user {} by admin {}", userId, adminTelegramId);
+
+        // Разблокируем пользователя через AccountClient
+        accountClient.unblockAccount(userId);
+
+        // Логируем действие в audit log (без причины)
+        auditLogService.logAction(
+                UNBLOCK_USER,
+                adminTelegramId,
+                userId,
+                null
+        );
+
+        log.info("User {} successfully unblocked by admin {}", userId, adminTelegramId);
     }
 
+    /**
+     * Получить страницу пользователей с пагинацией
+     *
+     * @param page номер страницы (начиная с 0)
+     * @param size размер страницы
+     * @return PageAccountDto с результатами
+     */
     public PageAccountDto getUsersPage(int page, int size) {
-        try {
-            UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromUriString(gatewayUrl + "/account")
-                    .queryParam("page", page)
-                    .queryParam("size", size)
-                    .queryParam("sort", "regDate,desc");
-
-            ResponseEntity<PageAccountDto> response = restTemplate.getForEntity(
-                    builder.toUriString(),
-                    PageAccountDto.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            throw new GatewayException("Failed to fetch users page");
-
-        } catch (HttpServerErrorException e) {
-            log.error("Gateway error: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway error: " + e.getMessage());
-        } catch (ResourceAccessException e) {
-            log.error("Gateway unavailable: {}", e.getMessage(), e);
-            throw new GatewayException("Gateway unavailable");
-        }
+        log.debug("Fetching users page: page={}, size={}", page, size);
+        return accountClient.getAccountsPage(page, size, "regDate,desc");
     }
 }

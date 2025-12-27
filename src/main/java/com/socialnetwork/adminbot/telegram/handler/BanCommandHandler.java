@@ -1,7 +1,8 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
-import com.socialnetwork.adminbot.service.AuditService;
+import com.socialnetwork.adminbot.service.AuditLogService;
 import com.socialnetwork.adminbot.service.UserService;
+import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -15,68 +16,104 @@ import java.util.UUID;
 public class BanCommandHandler {
 
     private final UserService userService;
-    private final AuditService auditService;
+    private final AuditLogService auditLogService;
 
+    /**
+     * Обработка команды блокировки пользователя
+     */
     public SendMessage handleBan(Message message, Long adminTelegramId) {
         String[] parts = message.getText().split(" ");
+
+        // Проверка наличия аргумента
         if (parts.length < 2) {
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Usage: /ban <user_id>"
+                    BotMessage.BAN_USAGE.raw()
             );
         }
 
         try {
+            // Парсим UUID
             UUID userId = UUID.fromString(parts[1]);
+
+            // Блокируем пользователя
             userService.blockUser(userId);
 
-            auditService.log(adminTelegramId, "BLOCK_USER", userId, Map.of("reason", "Manual ban"));
-
-            return new SendMessage(
-                    message.getChatId().toString(),
-                    "✅ User " + userId + " has been blocked successfully."
+            // Логируем действие
+            auditLogService.log(
+                    adminTelegramId,
+                    "BLOCK_USER",
+                    userId,
+                    Map.of("reason", "Manual ban")
             );
-        } catch (IllegalArgumentException e) {
+
+            // Возвращаем успешное сообщение
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Invalid user ID format. Please provide a valid UUID."
+                    BotMessage.BAN_SUCCESS.format(userId)
+            );
+
+        } catch (IllegalArgumentException e) {
+            // Ошибка формата UUID
+            return new SendMessage(
+                    message.getChatId().toString(),
+                    BotMessage.ERROR_INVALID_USER_ID.raw()
             );
         } catch (Exception e) {
+            // Общая ошибка
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Error: " + e.getMessage()
+                    BotMessage.ERROR_GENERIC.format(e.getMessage())
             );
         }
     }
 
+    /**
+     * Обработка команды разблокировки пользователя
+     */
     public SendMessage handleUnban(Message message, Long adminTelegramId) {
         String[] parts = message.getText().split(" ");
+
+        // Проверка наличия аргумента
         if (parts.length < 2) {
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Usage: /unban <user_id>"
+                    BotMessage.UNBAN_USAGE.raw()
             );
         }
 
         try {
+            // Парсим UUID
             UUID userId = UUID.fromString(parts[1]);
+
+            // Разблокируем пользователя
             userService.unblockUser(userId);
 
-            auditService.log(adminTelegramId, "UNBLOCK_USER", userId, Map.of("reason", "Manual unban"));
-
-            return new SendMessage(
-                    message.getChatId().toString(),
-                    "✅ User " + userId + " has been unblocked successfully."
+            // Логируем действие
+            auditLogService.log(
+                    adminTelegramId,
+                    "UNBLOCK_USER",
+                    userId,
+                    Map.of("reason", "Manual unban")
             );
-        } catch (IllegalArgumentException e) {
+
+            // Возвращаем успешное сообщение
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Invalid user ID format. Please provide a valid UUID."
+                    BotMessage.UNBAN_SUCCESS.format(userId)
+            );
+
+        } catch (IllegalArgumentException e) {
+            // Ошибка формата UUID
+            return new SendMessage(
+                    message.getChatId().toString(),
+                    BotMessage.ERROR_INVALID_USER_ID.raw()
             );
         } catch (Exception e) {
+            // Общая ошибка
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Error: " + e.getMessage()
+                    BotMessage.ERROR_GENERIC.format(e.getMessage())
             );
         }
     }

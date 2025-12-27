@@ -3,6 +3,7 @@ package com.socialnetwork.adminbot.telegram;
 import com.socialnetwork.adminbot.config.TelegramBotConfig;
 import com.socialnetwork.adminbot.service.AdminService;
 import com.socialnetwork.adminbot.telegram.handler.*;
+import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -104,7 +105,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             } else {
                 response = new SendMessage(
                         message.getChatId().toString(),
-                        "❌ Unknown command. Use /start to see available commands."
+                        BotMessage.ERROR_UNKNOWN_COMMAND.raw()
                 );
             }
 
@@ -122,7 +123,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             try {
                 execute(callbackQueryHandler.createAnswer(
                         callbackQuery.getId(),
-                        "❌ Unauthorized"
+                        BotMessage.CALLBACK_UNAUTHORIZED.raw()
                 ));
             } catch (TelegramApiException e) {
                 log.error("Error sending callback answer: {}", e.getMessage(), e);
@@ -135,7 +136,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             EditMessageText response = callbackQueryHandler.handle(callbackQuery, userId);
             execute(response);
-            execute(callbackQueryHandler.createAnswer(callbackQuery.getId(), "✅ Done"));
+            execute(callbackQueryHandler.createAnswer(callbackQuery.getId(), BotMessage.CALLBACK_SUCCESS.raw()));
         } catch (TelegramApiException e) {
             log.error("Error handling callback query: {}", e.getMessage(), e);
         }
@@ -154,7 +155,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sendUnauthorizedMessage(Long chatId) {
         SendMessage message = new SendMessage(
                 chatId.toString(),
-                "❌ Unauthorized. This bot is only available for administrators."
+                BotMessage.ERROR_UNAUTHORIZED.raw()
         );
         try {
             execute(message);

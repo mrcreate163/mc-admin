@@ -6,12 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminDto {
-    private Long id;
+    private UUID id;
     private Long telegramUserId;
     private String username;
     private String firstName;

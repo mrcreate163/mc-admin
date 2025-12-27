@@ -1,8 +1,9 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
 import com.socialnetwork.adminbot.dto.StatisticsDto;
-import com.socialnetwork.adminbot.service.AuditService;
+import com.socialnetwork.adminbot.service.AuditLogService;
 import com.socialnetwork.adminbot.service.StatisticsService;
+import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -15,36 +16,40 @@ import java.util.Map;
 public class StatsCommandHandler {
 
     private final StatisticsService statisticsService;
-    private final AuditService auditService;
+    private final AuditLogService auditLogService;
 
     public SendMessage handle(Message message, Long adminTelegramId) {
         try {
+            // Получаем статистику
             StatisticsDto stats = statisticsService.getStatistics();
 
-            auditService.log(adminTelegramId, "VIEW_STATS", Map.of());
+            // Логируем просмотр статистики
+            auditLogService.log(adminTelegramId, "VIEW_STATS", Map.of());
 
-            String text = String.format(
-                    "📊 *Platform Statistics*\n\n" +
-                    "Total Users: %d\n" +
-                    "New Users Today: %d\n" +
-                    "Active Users: %d\n" +
-                    "Blocked Users: %d\n" +
-                    "Total Admins: %d",
-                    stats.getTotalUsers(),
-                    stats.getNewUsersToday(),
-                    stats.getActiveUsers(),
-                    stats.getBlockedUsers(),
-                    stats.getTotalAdmins()
+            // Формируем текст со статистикой
+            String text = String.join("\n",
+                    BotMessage.STATS_TITLE.raw(),
+                    "",
+                    BotMessage.STATS_TOTAL_USERS.format(stats.getTotalUsers()),
+                    BotMessage.STATS_NEW_TODAY.format(stats.getNewUsersToday()),
+                    BotMessage.STATS_ACTIVE_USERS.format(stats.getActiveUsers()),
+                    BotMessage.STATS_BLOCKED_USERS.format(stats.getBlockedUsers()),
+                    BotMessage.STATS_TOTAL_ADMINS.format(stats.getTotalAdmins())
             );
 
-            SendMessage response = new SendMessage(message.getChatId().toString(), text);
-            response.setParseMode("Markdown");
+            SendMessage response = new SendMessage(
+                    message.getChatId().toString(),
+                    text
+            );
+            response.setParseMode("HTML");
+
             return response;
 
         } catch (Exception e) {
+            // Ошибка получения статистики
             return new SendMessage(
                     message.getChatId().toString(),
-                    "❌ Error fetching statistics: " + e.getMessage()
+                    BotMessage.ERROR_STATS_FETCH.format(e.getMessage())
             );
         }
     }

@@ -27,27 +27,34 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: admin-bot-kafka
-    depends_on:
-      - zookeeper
+    container_name: social-network-kafka
+    restart: unless-stopped
     ports:
-      - "9092:9092"
+      - "${KAFKA_PORT:-9092}:9092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_ADVERTISED_HOST:-localhost}:${KAFKA_PORT:-9092},INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      - admin-bot-network
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: admin-bot-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - admin-bot-network
 
@@ -58,33 +65,6 @@ services:
       - "8761:8761"
     networks:
       - admin-bot-network
-
-  admin-bot-service:
-    build: .
-    container_name: admin-bot-service
-    depends_on:
-      - postgres
-      - redis
-      - kafka
-      - eureka
-    environment:
-      DB_HOST: postgres
-      DB_NAME: social_network
-      DB_USER: postgres
-      DB_PASSWORD: password
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_SERVERS: kafka:9092
-      EUREKA_HOST: eureka
-      GATEWAY_HOST: gateway
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
-      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
-    ports:
-      - "8080:8080"
-    networks:
-      - admin-bot-network
-    restart: unless-stopped
 
 volumes:
   postgres_data:

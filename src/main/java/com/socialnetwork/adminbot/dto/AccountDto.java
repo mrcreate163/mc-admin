@@ -14,6 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccountDto {
+
     private UUID id;
     private String email;
     private String phone;

@@ -159,7 +159,7 @@ deploy:dev:
           --name mc-admin \
           --network social-network-net \
           --restart unless-stopped \
-          -p 8090:8090 \
+          -p 8091:8091 \
           -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
           -e SPRING_DATASOURCE_USERNAME=postgres \
           -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
@@ -183,7 +183,7 @@ deploy:dev:
       EOF
   environment:
     name: development
-    url: http://$DEV_SERVER_HOST:8090
+    url: http://$DEV_SERVER_HOST:8091
   rules:
     - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
@@ -220,7 +220,7 @@ deploy:prod:
           --name mc-admin \
           --network social-network-net \
           --restart unless-stopped \
-          -p 8090:8090 \
+          -p 8091:8091 \
           -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
           -e SPRING_DATASOURCE_USERNAME=postgres \
           -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
@@ -244,7 +244,7 @@ deploy:prod:
       EOF
   environment:
     name: production
-    url: http://$DEV_SERVER_HOST:8090
+    url: http://$DEV_SERVER_HOST:8091
   rules:
     - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"

@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: admin-bot-service-test
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  liquibase:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: 
+
+# Account service URL for tests
+services:
+  account:
+    url: http://localhost:8081/internal/account
+
+# Telegram bot configuration for tests
+telegram:
+  bot:
+    token: test-token-12345
+    username: TestBot
+
+# Admin whitelist for tests
+admin:
+  whitelist: 123456789,987654321
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.socialnetwork.adminbot: DEBUG

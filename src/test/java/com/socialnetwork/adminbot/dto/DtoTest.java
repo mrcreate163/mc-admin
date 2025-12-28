@@ -96,12 +96,10 @@ class DtoTest {
     @Test
     @DisplayName("AdminDto - should create with builder")
     void adminDto_ShouldCreateWithBuilder() {
-        // Given
-        UUID id = UUID.randomUUID();
+
 
         // When
         AdminDto admin = AdminDto.builder()
-                .id(id)
                 .telegramUserId(123456789L)
                 .username("admin")
                 .firstName("Admin")
@@ -110,7 +108,6 @@ class DtoTest {
                 .build();
 
         // Then
-        assertThat(admin.getId()).isEqualTo(id);
         assertThat(admin.getTelegramUserId()).isEqualTo(123456789L);
         assertThat(admin.getUsername()).isEqualTo("admin");
         assertThat(admin.getFirstName()).isEqualTo("Admin");

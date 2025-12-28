@@ -37,12 +37,10 @@ class AdminServiceTest {
     private Admin testAdmin;
     private AdminDto testAdminDto;
     private static final Long TELEGRAM_USER_ID = 123456789L;
-    private static final UUID ADMIN_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
         testAdmin = Admin.builder()
-                .id(ADMIN_ID)
                 .telegramUserId(TELEGRAM_USER_ID)
                 .username("testadmin")
                 .firstName("Test")

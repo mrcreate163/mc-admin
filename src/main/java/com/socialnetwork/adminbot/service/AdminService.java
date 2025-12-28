@@ -46,8 +46,8 @@ public class AdminService {
                 .build();
 
         Admin saved = adminRepository.save(admin);
-        log.info("Created new admin: id={} telegramUserId={}", 
-                saved.getId(), saved.getTelegramUserId());
+        log.info("Created new admin: telegramUserId={}",
+                saved.getTelegramUserId());
         return saved;
     }
 

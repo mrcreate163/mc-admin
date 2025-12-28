@@ -1,9 +1,6 @@
 databaseChangeLog:
   - include:
       file: db/changelog/v1.0/001-create-admins-table.yaml
+
   - include:
       file: db/changelog/v1.0/002-create-audit-log-table.yaml
-  - include:
-      file: db/changelog/v1.0/003-recreate-admins-table.yml
-  - include:
-      file: db/changelog/v1.0/004-update-audit-log-admin-id.yml

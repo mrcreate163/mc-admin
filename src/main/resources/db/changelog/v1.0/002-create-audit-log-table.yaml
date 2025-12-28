@@ -8,32 +8,43 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: uuid
+                  type: UUID
                   constraints:
                     primaryKey: true
                     nullable: false
+
               - column:
                   name: admin_id
-                  type: uuid
+                  type: BIGINT  # ⭐ Изменено с UUID на BIGINT
+                  constraints:
+                    nullable: false
+
               - column:
                   name: action_type
                   type: VARCHAR(100)
                   constraints:
                     nullable: false
+
               - column:
                   name: target_user_id
                   type: UUID
+
               - column:
                   name: details
                   type: JSONB
+
               - column:
                   name: created_at
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
-        - addForeignKeyConstraint:
-            baseTableName: audit_log
-            baseColumnNames: admin_id
-            constraintName: fk_audit_log_admin
-            referencedTableName: admins
-            referencedColumnNames: id
-            onDelete: SET NULL
+                  constraints:
+                    nullable: false
+
+        # Опционально: добавь FK constraint для Version 2.0
+        # - addForeignKeyConstraint:
+        #     baseTableName: audit_log
+        #     baseColumnNames: admin_id
+        #     constraintName: fk_audit_log_admin
+        #     referencedTableName: admins
+        #     referencedColumnNames: telegram_user_id
+        #     onDelete: CASCADE

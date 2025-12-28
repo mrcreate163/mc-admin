@@ -224,6 +224,7 @@ deploy:prod:
           -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
           -e SPRING_DATASOURCE_USERNAME=postgres \
           -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
+          -e REDIS_PASSWORD=$REDIS_PASSWORD \
           -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN \
           -e TELEGRAM_BOT_USERNAME=$TELEGRAM_BOT_USERNAME \
           -e ADMIN_WHITELIST=$ADMIN_WHITELIST \

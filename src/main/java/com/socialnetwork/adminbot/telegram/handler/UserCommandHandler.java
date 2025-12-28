@@ -21,7 +21,7 @@ public class UserCommandHandler {
     private final UserService userService;
     private final AuditLogService auditLogService;
 
-    public SendMessage handle(Message message, Long adminTelegramId) {
+    public SendMessage handle(Message message, Long adminId) {
         String[] parts = message.getText().split(" ");
 
         // Проверка наличия аргумента
@@ -42,7 +42,7 @@ public class UserCommandHandler {
             // Логируем действие администратора
             auditLogService.logAction(
                     "VIEW_USER_INFO",
-                    adminTelegramId,
+                    adminId,
                     Map.of("userId", userId.toString())
             );
 

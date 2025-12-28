@@ -17,11 +17,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Admin {
 
+    /**
+     * Telegram User ID используем как primary Key
+     */
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @Column(name = "telegram_user_id", unique = true, nullable = false)
+    @Column(name = "telegram_user_id")
     private Long telegramUserId;
 
     @Column(name = "username")

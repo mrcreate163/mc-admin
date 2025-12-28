@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: update-audit-log-admin-id-type
+      author: your-name
+      comment: Change audit_log.admin_id from UUID to BIGINT to match admins.telegram_user_id
+      changes:
+        # Опционально: очистить таблицу если нужен clean start
+        # - delete:
+        #     tableName: audit_log
+
+        # Изменяем тип колонки admin_id
+        - modifyDataType:
+            tableName: audit_log
+            columnName: admin_id
+            newDataType: BIGINT
+
+        # Добавляем NOT NULL constraint
+        - addNotNullConstraint:
+            tableName: audit_log
+            columnName: admin_id
+            columnDataType: BIGINT

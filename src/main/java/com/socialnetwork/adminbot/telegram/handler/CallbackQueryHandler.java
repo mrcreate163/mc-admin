@@ -25,7 +25,7 @@ public class CallbackQueryHandler {
     private final StatisticsService statisticsService;
     private final AuditLogService auditLogService;
 
-    public EditMessageText handle(CallbackQuery callbackQuery, Long adminTelegramId) {
+    public EditMessageText handle(CallbackQuery callbackQuery, Long adminId) {
         String data = callbackQuery.getData();
         Long chatId = callbackQuery.getMessage().getChatId();
         Integer messageId = callbackQuery.getMessage().getMessageId();
@@ -33,13 +33,13 @@ public class CallbackQueryHandler {
         try {
             // Маршрутизация по типу callback data
             if (data.startsWith("block:")) {
-                return handleBlock(data, chatId, messageId, adminTelegramId);
+                return handleBlock(data, chatId, messageId, adminId);
             } else if (data.startsWith("unblock:")) {
-                return handleUnblock(data, chatId, messageId, adminTelegramId);
+                return handleUnblock(data, chatId, messageId, adminId);
             } else if (data.startsWith("stats:")) {
                 return handleUserStats(data, chatId, messageId);
             } else if (data.equals("show_stats")) {
-                return handleShowStats(chatId, messageId, adminTelegramId);
+                return handleShowStats(chatId, messageId, adminId);
             } else if (data.equals("main_menu")) {
                 return handleMainMenu(chatId, messageId);
             }
@@ -59,11 +59,11 @@ public class CallbackQueryHandler {
     /**
      * Обработка блокировки пользователя через callback
      */
-    private EditMessageText handleBlock(String data, Long chatId, Integer messageId, Long adminTelegramId) {
+    private EditMessageText handleBlock(String data, Long chatId, Integer messageId, Long adminId) {
         UUID userId = UUID.fromString(data.substring("block:".length()));
 
-        userService.blockUser(userId, adminTelegramId, "Blocked via callback");
-        auditLogService.logAction("BLOCK_USER", adminTelegramId, userId, Map.of("source", "callback").toString());
+        userService.blockUser(userId, adminId, "Blocked via callback");
+        auditLogService.logAction("BLOCK_USER", adminId, userId, Map.of("source", "callback").toString());
 
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId.toString());
@@ -77,11 +77,11 @@ public class CallbackQueryHandler {
     /**
      * Обработка разблокировки пользователя через callback
      */
-    private EditMessageText handleUnblock(String data, Long chatId, Integer messageId, Long adminTelegramId) {
+    private EditMessageText handleUnblock(String data, Long chatId, Integer messageId, Long adminId) {
         UUID userId = UUID.fromString(data.substring("unblock:".length()));
 
-        userService.unblockUser(userId, adminTelegramId);
-        auditLogService.logAction("UNBLOCK_USER", adminTelegramId, userId, Map.of("source", "callback").toString());
+        userService.unblockUser(userId, adminId);
+        auditLogService.logAction("UNBLOCK_USER", adminId, userId, Map.of("source", "callback").toString());
 
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId.toString());
@@ -113,9 +113,9 @@ public class CallbackQueryHandler {
     /**
      * Показать общую статистику платформы
      */
-    private EditMessageText handleShowStats(Long chatId, Integer messageId, Long adminTelegramId) {
+    private EditMessageText handleShowStats(Long chatId, Integer messageId, Long adminId) {
         StatisticsDto stats = statisticsService.getStatistics();
-        auditLogService.logAction("VIEW_STATS", adminTelegramId, Map.of("source", "callback"));
+        auditLogService.logAction("VIEW_STATS", adminId, Map.of("source", "callback"));
 
         String text = String.join("\n",
                 BotMessage.STATS_TITLE.raw(),

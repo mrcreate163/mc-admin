@@ -18,13 +18,13 @@ public class StatsCommandHandler {
     private final StatisticsService statisticsService;
     private final AuditLogService auditLogService;
 
-    public SendMessage handle(Message message, Long adminTelegramId) {
+    public SendMessage handle(Message message, Long adminId) {
         try {
             // Получаем статистику
             StatisticsDto stats = statisticsService.getStatistics();
 
             // Логируем просмотр статистики
-            auditLogService.logAction("VIEW_STATS", adminTelegramId, Map.of());
+            auditLogService.logAction("VIEW_STATS", adminId, Map.of());
 
             // Формируем текст со статистикой
             String text = String.join("\n",

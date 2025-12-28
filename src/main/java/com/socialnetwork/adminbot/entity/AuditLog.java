@@ -24,12 +24,18 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    /**
+     * Telegram User ID администратора
+     */
     @Column(name = "admin_id")
-    private UUID adminId;
+    private Long adminId;
 
     @Column(name = "action_type", nullable = false, length = 100)
     private String actionType;
 
+    /**
+     * UUID целевого пользователя из микросервиса mc-account
+     */
     @Column(name = "target_user_id")
     private UUID targetUserId;
 
@@ -44,4 +50,9 @@ public class AuditLog {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    // Опционально: добавить FK constraint для Version 2.0
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "admin_id", insertable = false, updatable = false)
+    // private Admin admin;
 }

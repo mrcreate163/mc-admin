@@ -21,7 +21,7 @@ public class BanCommandHandler {
     /**
      * Обработка команды блокировки пользователя
      */
-    public SendMessage handleBan(Message message, Long adminTelegramId) {
+    public SendMessage handleBan(Message message, Long adminId) {
         String[] parts = message.getText().split(" ");
 
         // Проверка наличия аргумента
@@ -37,10 +37,10 @@ public class BanCommandHandler {
             UUID userId = UUID.fromString(parts[1]);
 
             // Блокируем пользователя
-            userService.blockUser(userId, adminTelegramId, "Manual ban");
+            userService.blockUser(userId, adminId, "Manual ban");
 
             // Логируем действие
-            auditLogService.logAction("BLOCK_USER", adminTelegramId, userId, Map.of("reason", "Manual ban").toString());
+            auditLogService.logAction("BLOCK_USER", adminId, userId, Map.of("reason", "Manual ban").toString());
 
             // Возвращаем успешное сообщение
             return new SendMessage(
@@ -66,7 +66,7 @@ public class BanCommandHandler {
     /**
      * Обработка команды разблокировки пользователя
      */
-    public SendMessage handleUnban(Message message, Long adminTelegramId) {
+    public SendMessage handleUnban(Message message, Long adminId) {
         String[] parts = message.getText().split(" ");
 
         // Проверка наличия аргумента
@@ -82,10 +82,10 @@ public class BanCommandHandler {
             UUID userId = UUID.fromString(parts[1]);
 
             // Разблокируем пользователя
-            userService.unblockUser(userId, adminTelegramId);
+            userService.unblockUser(userId, adminId);
 
             // Логируем действие
-            auditLogService.logAction("UNBLOCK_USER", adminTelegramId, userId, Map.of("reason", "Manual unban").toString());
+            auditLogService.logAction("UNBLOCK_USER", adminId, userId, Map.of("reason", "Manual unban").toString());
 
             // Возвращаем успешное сообщение
             return new SendMessage(

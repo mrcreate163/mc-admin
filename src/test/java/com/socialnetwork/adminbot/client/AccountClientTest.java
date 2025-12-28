@@ -40,7 +40,7 @@ class AccountClientTest {
 
     private AccountDto testAccount;
     private static final UUID USER_ID = UUID.randomUUID();
-    private static final String ACCOUNT_SERVICE_URL = "http://localhost:8081/internal/account";
+    private static final String ACCOUNT_SERVICE_URL = "http://localhost:34135/api/v1/internal/account";
 
     @BeforeEach
     void setUp() {

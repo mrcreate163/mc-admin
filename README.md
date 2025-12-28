@@ -23,19 +23,19 @@ Telegram-бот для администрирования социальной �
 
 ## 🛠 Технологический стек
 
-| Категория | Технология |
-|-----------|------------|
-| **Язык** | Java 17 |
-| **Фреймворк** | Spring Boot 4.0.1 |
-| **Web** | Spring Web (REST клиенты) |
+| Категория | Технология                   |
+|-----------|------------------------------|
+| **Язык** | Java 21                      |
+| **Фреймворк** | Spring Boot 4.0.1            |
+| **Web** | Spring Web (REST клиенты)    |
 | **Данные** | Spring Data JPA + PostgreSQL |
-| **Миграции** | Liquibase |
-| **Кеш** | Spring Data Redis |
-| **Сообщения** | Spring Kafka (для v2.0+) |
-| **Telegram** | TelegramBots 6.9.7.1 |
-| **Сборка** | Maven |
-| **Контейнеризация** | Docker |
-| **CI/CD** | GitLab CI |
+| **Миграции** | Liquibase                    |
+| **Кеш** | Spring Data Redis            |
+| **Сообщения** | Spring Kafka (для v2.0+)     |
+| **Telegram** | TelegramBots 6.9.7.1         |
+| **Сборка** | Maven                        |
+| **Контейнеризация** | Docker                       |
+| **CI/CD** | GitLab CI                    |
 
 ## 🏗 Архитектура
 
@@ -154,15 +154,16 @@ docker-compose up -d
 
 ### Переменные окружения
 
-| Переменная | Описание | По умолчанию |
-|------------|----------|--------------|
-| `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | `jdbc:postgresql://postgres:5432/admin_bot_db` |
-| `SPRING_DATASOURCE_USERNAME` | Пользователь БД | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | Пароль БД | - |
-| `TELEGRAM_BOT_TOKEN` | Токен Telegram бота | - |
-| `TELEGRAM_BOT_USERNAME` | Username бота | - |
-| `ADMIN_WHITELIST` | Список Telegram ID администраторов | `123456789` |
-| `ACCOUNT_SERVICE_URL` | URL сервиса аккаунтов | `http://mc-account:8080/internal/account` |
+| Переменная                   | Описание                           | По умолчанию                                   |
+|------------------------------|------------------------------------|------------------------------------------------|
+| `SPRING_DATASOURCE_URL`      | JDBC URL PostgreSQL                | `jdbc:postgresql://postgres:5432/admin_bot_db` |
+| `SPRING_DATASOURCE_USERNAME` | Пользователь Postgres              | `postgres`                                     |
+| `SPRING_DATASOURCE_PASSWORD` | Пароль Postgres                    | -                                              |
+| `REDIS_PASSWORD`             | Пароль Redis                       | -                                              |
+| `TELEGRAM_BOT_TOKEN`         | Токен Telegram бота                | -                                              |
+| `TELEGRAM_BOT_USERNAME`      | Username бота                      | -                                              |
+| `ADMIN_WHITELIST`            | Список Telegram ID администраторов | `123456789`                                    |
+| `ACCOUNT_SERVICE_URL`        | URL сервиса аккаунтов              | `http://mc-account:8080/internal/account`      |
 
 ### Пример .env файла
 
@@ -187,27 +188,26 @@ ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account
 
 ### Таблица `admins`
 
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| `id` | UUID | Первичный ключ |
-| `telegram_user_id` | BIGINT | Telegram ID (уникальный) |
-| `username` | VARCHAR(255) | Telegram username |
-| `first_name` | VARCHAR(255) | Имя |
-| `role` | VARCHAR(50) | Роль (SUPER_ADMIN, ADMIN, MODERATOR) |
-| `is_active` | BOOLEAN | Активен |
-| `created_at` | TIMESTAMP | Дата создания |
-| `updated_at` | TIMESTAMP | Дата обновления |
+| Колонка            | Тип          | Описание                             |
+|--------------------|--------------|--------------------------------------|
+| `telegram_user_id` | BIGINT       | Telegram ID(primary key)             |
+| `username`         | VARCHAR(255) | Telegram username                    |
+| `first_name`       | VARCHAR(255) | Имя                                  |
+| `role`             | VARCHAR(50)  | Роль (SUPER_ADMIN, ADMIN, MODERATOR) |
+| `is_active`        | BOOLEAN      | Активен                              |
+| `created_at`       | TIMESTAMP    | Дата создания                        |
+| `updated_at`       | TIMESTAMP    | Дата обновления                      |
 
 ### Таблица `audit_log`
 
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| `id` | UUID | Первичный ключ |
-| `admin_id` | BIGINT | Telegram ID администратора |
-| `action_type` | VARCHAR(100) | Тип действия |
-| `target_user_id` | UUID | ID целевого пользователя |
-| `details` | JSONB | Дополнительные данные |
-| `created_at` | TIMESTAMP | Время действия |
+| Колонка          | Тип          | Описание                   |
+|------------------|--------------|----------------------------|
+| `id`             | UUID         | Первичный ключ             |
+| `admin_id`       | BIGINT       | Telegram ID администратора |
+| `action_type`    | VARCHAR(100) | Тип действия               |
+| `target_user_id` | UUID         | ID целевого пользователя   |
+| `details`        | JSONB        | Дополнительные данные      |
+| `created_at`     | TIMESTAMP    | Время действия             |
 
 ### Миграции
 
@@ -276,18 +276,18 @@ src/test/java/com/socialnetwork/adminbot/
 
 ### Необходимые GitLab Variables
 
-| Переменная | Описание |
-|------------|----------|
-| `DOCKER_HUB_USER` | Пользователь Docker Hub |
-| `DOCKER_HUB_TOKEN` | Токен Docker Hub |
-| `DEV_SERVER_HOST` | Хост сервера для деплоя |
-| `DEV_SERVER_USER` | SSH пользователь |
-| `SSH_PRIVATE_KEY` | SSH приватный ключ |
-| `POSTGRES_PASSWORD` | Пароль PostgreSQL |
-| `REDIS_PASSWORD` | Пароль Redis |
-| `TELEGRAM_BOT_TOKEN` | Токен Telegram бота |
-| `TELEGRAM_BOT_USERNAME` | Username бота |
-| `ADMIN_WHITELIST` | Список Telegram ID админов |
+| Переменная              | Описание                   |
+|-------------------------|----------------------------|
+| `DOCKER_HUB_USER`       | Пользователь Docker Hub    |
+| `DOCKER_HUB_TOKEN`      | Токен Docker Hub           |
+| `DEV_SERVER_HOST`       | Хост сервера для деплоя    |
+| `DEV_SERVER_USER`       | SSH пользователь           |
+| `SSH_PRIVATE_KEY`       | SSH приватный ключ         |
+| `POSTGRES_PASSWORD`     | Пароль PostgreSQL          |
+| `REDIS_PASSWORD`        | Пароль Redis               |
+| `TELEGRAM_BOT_TOKEN`    | Токен Telegram бота        |
+| `TELEGRAM_BOT_USERNAME` | Username бота              |
+| `ADMIN_WHITELIST`       | Список Telegram ID админов |
 
 ### Ручной деплой
 
@@ -313,12 +313,12 @@ docker run -d \
 
 Все запросы идут на internal API:
 
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/internal/account/{id}` | Получить аккаунт по ID |
-| PUT | `/internal/account/block/{id}` | Заблокировать аккаунт |
-| DELETE | `/internal/account/block/{id}` | Разблокировать аккаунт |
-| GET | `/internal/account?page=0&size=10` | Список аккаунтов |
+| Метод   | Endpoint                                 | Описание               |
+|---------|------------------------------------------|------------------------|
+| GET     | `api/v1/internal/account/{id}`           | Получить аккаунт по ID |
+| PUT     | `api/v1/internal/account/block/{id}`     | Заблокировать аккаунт  |
+| DELETE  | `api/v1/internal/account/block/{id}`     | Разблокировать аккаунт |
+| GET     | `api/v1/internal/account?page=0&size=10` | Список аккаунтов       |
 
 ## 💻 Разработка
 
@@ -331,15 +331,6 @@ docker run -d \
 - UUID для ID пользователей, UUID для внутренних ID
 - Логируйте важные операции
 - `@Transactional` для операций с БД
-
-### Добавление новой команды
-
-1. Создайте handler в `telegram/handler/`
-2. Реализуйте логику, вызывая сервисы
-3. Зарегистрируйте handler в `TelegramBot.java`
-4. Добавьте аудит логирование
-5. Добавьте константы сообщений в `BotMessage.java`
-6. Напишите тесты
 
 ### Структура коммитов
 

@@ -35,7 +35,7 @@ spring:
 # ⭐ URL к internal эндпоинтам mc-account
 services:
   account:
-    url: ${ACCOUNT_SERVICE_URL:http://mc-account:8080/internal/account}
+    url: ${ACCOUNT_SERVICE_URL:http://mc-account:34135/internal/account}
 
 # Telegram
 telegram:

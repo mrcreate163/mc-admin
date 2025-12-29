@@ -150,7 +150,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else if (text.startsWith("/stats")) {
             return statsCommandHandler.handle(message, userId);
         } else if (text.startsWith("/ban")) {
-            return banCommandHandler.handleBan(message, userId);
+            return banCommandHandler.handle(message, userId);
         } else if (text.startsWith("/unban")) {
             return banCommandHandler.handleUnban(message, userId);
         } else {

@@ -27,7 +27,7 @@ public class AccountDto {
     private LocalDateTime regDate;
     private LocalDate birthDate;
     private LocalDateTime lastOnlineTime;
-    private boolean isOnline;
-    private boolean isBlocked;
-    private boolean isDeleted;
+    private Boolean isOnline;
+    private Boolean isBlocked;
+    private Boolean isDeleted;
 }

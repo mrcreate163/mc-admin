@@ -84,7 +84,7 @@ build:
     - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
-    - test
+#    - test
 
 # ============================================================
 # СТАДИЯ: PUSH В DOCKER REGISTRY

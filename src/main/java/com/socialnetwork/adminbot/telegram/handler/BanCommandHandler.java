@@ -148,10 +148,9 @@ public class BanCommandHandler extends StatefulCommandHandler {
         String targetUserIdStr = state.getData(StateDataKey.BAN_TARGET_USER_ID, String.class);
         String targetUserEmail = state.getData(StateDataKey.BAN_TARGET_EMAIL, String.class);
 
-        // Сохраняем причину и переходим к подтверждению
-        state.addData(StateDataKey.BAN_REASON, reason);
-
         try {
+            // Сохраняем причину в Redis перед переходом к подтверждению
+            conversationStateService.updateStateData(adminId, StateDataKey.BAN_REASON, reason);
             stateTransitionService.transitionTo(adminId, BotState.CONFIRMING_BAN);
 
             log.info("User {} provided ban reason: {}", adminId, reason);

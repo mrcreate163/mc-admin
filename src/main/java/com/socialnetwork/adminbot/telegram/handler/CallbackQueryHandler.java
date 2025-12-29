@@ -106,10 +106,9 @@ public class CallbackQueryHandler {
             return createErrorMessage(chatId, messageId, BotMessage.ERROR_STATE_FOR_REASON.raw());
         }
 
-        // Сохраняем причину
-        state.addData(StateDataKey.BAN_REASON, readableReason);
-
         try {
+            // Сохраняем причину в Redis перед переходом к подтверждению
+            conversationStateService.updateStateData(adminId, StateDataKey.BAN_REASON, readableReason);
             stateTransitionService.transitionTo(adminId, BotState.CONFIRMING_BAN);
 
             String targetUserIdStr = state.getData(StateDataKey.BAN_TARGET_USER_ID, String.class);

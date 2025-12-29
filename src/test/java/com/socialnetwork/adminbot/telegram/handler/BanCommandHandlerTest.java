@@ -192,6 +192,8 @@ class BanCommandHandlerTest {
             assertThat(result.getText()).contains(reason);
             assertThat(result.getReplyMarkup()).isNotNull(); // confirmation keyboard
 
+            // Verify reason is saved to Redis before transition
+            verify(conversationStateService).updateStateData(ADMIN_TELEGRAM_ID, StateDataKey.BAN_REASON, reason);
             verify(stateTransitionService).transitionTo(ADMIN_TELEGRAM_ID, BotState.CONFIRMING_BAN);
         }
 

@@ -1,15 +1,17 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+import com.socialnetwork.adminbot.domain.BotState;
+import com.socialnetwork.adminbot.domain.ConversationState;
+import com.socialnetwork.adminbot.domain.StateDataKey;
 import com.socialnetwork.adminbot.dto.StatisticsDto;
-import com.socialnetwork.adminbot.service.AuditLogService;
-import com.socialnetwork.adminbot.service.StatisticsService;
-import com.socialnetwork.adminbot.service.UserService;
+import com.socialnetwork.adminbot.service.*;
 import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
@@ -24,6 +26,9 @@ public class CallbackQueryHandler {
     private final UserService userService;
     private final StatisticsService statisticsService;
     private final AuditLogService auditLogService;
+    private final ConversationStateService conversationStateService;
+    private final StateTransitionService  stateTransitionService;
+    private final BanCommandHandler banCommandHandler;
 
     public EditMessageText handle(CallbackQuery callbackQuery, Long adminId) {
         String data = callbackQuery.getData();
@@ -42,6 +47,12 @@ public class CallbackQueryHandler {
                 return handleShowStats(chatId, messageId, adminId);
             } else if (data.equals("main_menu")) {
                 return handleMainMenu(chatId, messageId);
+            }else if (data.startsWith("ban_reason:")) {
+                return handleBanReasonSelection(data, chatId, messageId, adminId);
+            } else if (data.equals("ban_confirm")) {
+                return handleBanConfirm(chatId, messageId, adminId);
+            } else if (data.equals("ban_cancel")) {
+                return handleBanCancel(chatId, messageId, adminId);
             }
             else {
                 return createErrorMessage(
@@ -69,6 +80,89 @@ public class CallbackQueryHandler {
         message.setChatId(chatId.toString());
         message.setMessageId(messageId);
         message.setText(BotMessage.BAN_CALLBACK_SUCCESS.format(userId));
+        message.setParseMode("HTML");
+
+        return message;
+    }
+
+    /**
+     * Обработка выбора причины бана из клавиатуры
+     */
+    private EditMessageText handleBanReasonSelection(String data, Long chatId, Integer messageId, Long adminId) {
+        String reason = data.substring("ban_reason:".length());
+
+        // Маппинг callback data -> человекочитаемая причина
+        String readableReason = switch (reason) {
+            case "spam" -> "Спам";
+            case "harassment" -> "Harassment";
+            case "bot" -> "Bot/Fake аккаунт";
+            case "violation" -> "Нарушение правил сообщества";
+            default -> reason;
+        };
+
+        ConversationState state = conversationStateService.getState(adminId);
+
+        if (state.getState() != BotState.AWAITING_BAN_REASON) {
+            return createErrorMessage(chatId, messageId, BotMessage.ERROR_STATE_FOR_REASON.raw());
+        }
+
+        // Сохраняем причину
+        state.addData(StateDataKey.BAN_REASON, readableReason);
+
+        try {
+            stateTransitionService.transitionTo(adminId, BotState.CONFIRMING_BAN);
+
+            String targetUserIdStr = state.getData(StateDataKey.BAN_TARGET_USER_ID, String.class);
+            String targetUserEmail = state.getData(StateDataKey.BAN_TARGET_EMAIL, String.class);
+
+            String confirmationText = String.join("\n\n",
+                    BotMessage.ACCEPT_TO_BLOCK.raw(),
+                    BotMessage.USER_INFO_EMAIL.format(targetUserEmail),
+                    BotMessage.USER_INFO_ID.format(targetUserIdStr),
+                    BotMessage.BAN_REASON.format(readableReason),
+                    BotMessage.ACCEPT_TO_BLOCK_2.raw());
+
+            EditMessageText message = new EditMessageText();
+            message.setChatId(chatId.toString());
+            message.setMessageId(messageId);
+            message.setText(confirmationText);
+            message.setParseMode("HTML");
+            message.setReplyMarkup(KeyboardBuilder.buildConfirmationKeyboard("ban"));
+
+            return message;
+
+        } catch (Exception e) {
+            log.error("Error processing ban reason selection: {}", e.getMessage(), e);
+            conversationStateService.resetToIdle(adminId);
+            return createErrorMessage(chatId, messageId, e.getMessage());
+        }
+    }
+
+    /**
+     * Подтверждение бана
+     */
+    private EditMessageText handleBanConfirm(Long chatId, Integer messageId, Long adminId) {
+        SendMessage result = banCommandHandler.executeBan(chatId, adminId);
+
+        EditMessageText message = new EditMessageText();
+        message.setChatId(chatId.toString());
+        message.setMessageId(messageId);
+        message.setText(result.getText());
+        message.setParseMode("HTML");
+
+        return message;
+    }
+
+    /**
+     * Отмена бана
+     */
+    private EditMessageText handleBanCancel(Long chatId, Integer messageId, Long adminId) {
+        SendMessage result = banCommandHandler.cancelBan(chatId, adminId);
+
+        EditMessageText message = new EditMessageText();
+        message.setChatId(chatId.toString());
+        message.setMessageId(messageId);
+        message.setText(result.getText());
         message.setParseMode("HTML");
 
         return message;

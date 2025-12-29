@@ -4,9 +4,7 @@ package com.socialnetwork.adminbot.telegram.keyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Утилита для создания inline клавиатур бота.
@@ -53,6 +51,58 @@ public class KeyboardBuilder {
         rows.add(row2);
 
         return createKeyboard(rows);
+    }
+
+    /**
+     * Клавиатура с причинами бана
+     * Структура:
+     *       [ 🚫 Спам ]      [😡 Harassment]
+     *       [🤖 Bot/Fake] [️ Нарушение правил]
+     *               [❌ Отмена]
+     */
+    public static InlineKeyboardMarkup buildBanReasonsKeyboard() {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        // Первая строка
+        keyboard.add(Arrays.asList(
+                createButton("🚫 Спам", "ban_reason:spam"),
+                createButton("😡 Harassment", "ban_reason:harassment")
+        ));
+
+        // Вторая строка
+        keyboard.add(Arrays.asList(
+                createButton("🤖 Bot/Fake", "ban_reason:bot"),
+                createButton("⚠️ Нарушение правил", "ban_reason:violation")
+        ));
+
+        // Третья строка - отмена
+        keyboard.add(Collections.singletonList(
+                createButton("❌ Отмена", "ban_cancel")
+        ));
+
+        markup.setKeyboard(keyboard);
+        return markup;
+    }
+
+    /**
+     * Клавиатура подтверждения действия
+     * Структура:
+     * [ ✅ Подтвердить ] [ ❌ Отмена ]
+     *
+     * @param actionPrefix префикс для callback data (например, "ban", "delete")
+     */
+    public static InlineKeyboardMarkup buildConfirmationKeyboard(String actionPrefix) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        keyboard.add(Arrays.asList(
+                createButton("✅ Подтвердить", actionPrefix + "_confirm"),
+                createButton("❌ Отмена", actionPrefix + "_cancel")
+        ));
+
+        markup.setKeyboard(keyboard);
+        return markup;
     }
 
     /**

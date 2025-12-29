@@ -26,6 +26,7 @@ public class UserService {
      */
     public AccountDto getUserById(UUID userId) {
         log.debug("Getting user by ID: {}", userId);
+
         return accountClient.getAccountById(userId);
     }
 

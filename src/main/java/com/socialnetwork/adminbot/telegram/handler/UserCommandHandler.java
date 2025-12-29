@@ -7,6 +7,7 @@ import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import com.socialnetwork.adminbot.telegram.messages.MessageUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -14,6 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class UserCommandHandler {
@@ -38,6 +40,7 @@ public class UserCommandHandler {
 
             // Получаем данные пользователя
             AccountDto account = userService.getUserById(userId);
+            log.debug("Status isBlocked = {}", account.getIsBlocked());
 
             // Логируем действие администратора
             auditLogService.logAction(

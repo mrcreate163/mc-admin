@@ -31,7 +31,7 @@ cache:
 
 # Стадии пайплайна
 stages:
-#  - test
+  - test
   - build
   - push
   - deploy
@@ -39,23 +39,23 @@ stages:
 # ============================================================
 # СТАДИЯ: ТЕСТИРОВАНИЕ
 # ============================================================
-#test:
-#  stage: test
-#  image: maven:3.9-eclipse-temurin-17
-#  script:
-#    - echo "🧪 Running unit tests..."
-#    - ./mvnw $MAVEN_CLI_OPTS clean test
-#  artifacts:
-#    when: always
-#    reports:
-#      junit:
-#        - target/surefire-reports/*.xml
-#    paths:
-#      - target/surefire-reports/
-#    expire_in: 7 days
-#  rules:
-#    - if: $CI_COMMIT_BRANCH
-#    - if: $CI_MERGE_REQUEST_IID
+test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - echo "🧪 Running unit tests..."
+    - ./mvnw $MAVEN_CLI_OPTS clean test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 7 days
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
 
 # ============================================================
 # СТАДИЯ: СБОРКА DOCKER ОБРАЗА
@@ -84,7 +84,7 @@ build:
     - if: $CI_COMMIT_BRANCH == "master"  # было "main"
     - if: $CI_COMMIT_BRANCH == "develop"
   needs:
-#    - test
+    - test
 
 # ============================================================
 # СТАДИЯ: PUSH В DOCKER REGISTRY

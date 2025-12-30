@@ -21,6 +21,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -298,7 +299,7 @@ class SearchCommandHandlerTest {
     // ========== HELPER METHODS ==========
 
     private PageAccountDto createSearchResults(int count) {
-        List<AccountDto> accounts = new java.util.ArrayList<>();
+        List<AccountDto> accounts = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             accounts.add(AccountDto.builder()
                     .id(UUID.randomUUID())

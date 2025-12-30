@@ -27,7 +27,7 @@ public class CallbackQueryHandler {
     private final StatisticsService statisticsService;
     private final AuditLogService auditLogService;
     private final ConversationStateService conversationStateService;
-    private final StateTransitionService  stateTransitionService;
+    private final StateTransitionService stateTransitionService;
     private final BanCommandHandler banCommandHandler;
 
     public EditMessageText handle(CallbackQuery callbackQuery, Long adminId) {
@@ -47,14 +47,13 @@ public class CallbackQueryHandler {
                 return handleShowStats(chatId, messageId, adminId);
             } else if (data.equals("main_menu")) {
                 return handleMainMenu(chatId, messageId);
-            }else if (data.startsWith("ban_reason:")) {
+            } else if (data.startsWith("ban_reason:")) {
                 return handleBanReasonSelection(data, chatId, messageId, adminId);
             } else if (data.equals("ban_confirm")) {
                 return handleBanConfirm(chatId, messageId, adminId);
             } else if (data.equals("ban_cancel")) {
                 return handleBanCancel(chatId, messageId, adminId);
-            }
-            else {
+            } else {
                 return createErrorMessage(
                         chatId,
                         messageId,
@@ -69,20 +68,57 @@ public class CallbackQueryHandler {
 
     /**
      * Обработка блокировки пользователя через callback
+     * ОБНОВЛЕНО: теперь использует State Machine flow
      */
     private EditMessageText handleBlock(String data, Long chatId, Integer messageId, Long adminId) {
-        UUID userId = UUID.fromString(data.substring("block:".length()));
+        try {
+            UUID userId = UUID.fromString(data.substring("block:".length()));
 
-        userService.blockUser(userId, adminId, "Blocked via callback");
-        auditLogService.logAction("BLOCK_USER", adminId, userId, Map.of("source", "callback").toString());
+            // Проверяем, что пользователь в IDLE состоянии
+            BotState currentState = conversationStateService.getCurrentState(adminId);
+            if (currentState != BotState.IDLE) {
+                return createErrorMessage(chatId, messageId, BotMessage.UNCOMPLETED_ACTION.raw());
+            }
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(BotMessage.BAN_CALLBACK_SUCCESS.format(userId));
-        message.setParseMode("HTML");
+            // Получаем информацию о пользователе
+            String email = userService.getUserById(userId).getEmail();
 
-        return message;
+            // Создаём состояние для flow бана
+            ConversationState newState = ConversationState.builder()
+                    .state(BotState.AWAITING_BAN_REASON)
+                    .build();
+
+            newState.addData(StateDataKey.BAN_TARGET_USER_ID, userId.toString());
+            newState.addData(StateDataKey.BAN_TARGET_EMAIL, email);
+
+            conversationStateService.setState(adminId, newState);
+
+            log.info("User {} started ban conversation via callback for target user {}", adminId, userId);
+
+            // Показываем клавиатуру с причинами бана
+            String text = String.join("\n\n",
+                    BotMessage.USER_INFO_EMAIL.format(email),
+                    BotMessage.USER_INFO_ID.format(userId),
+                    BotMessage.CHOOSE_REASON.raw()
+            );
+
+            EditMessageText message = new EditMessageText();
+            message.setChatId(chatId.toString());
+            message.setMessageId(messageId);
+            message.setText(text);
+            message.setParseMode("HTML");
+            message.setReplyMarkup(KeyboardBuilder.buildBanReasonsKeyboard());
+
+            return message;
+
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid user ID in callback: {}", data);
+            return createErrorMessage(chatId, messageId, "⚠️ Неверный формат ID пользователя");
+        } catch (Exception e) {
+            log.error("Error handling block callback: {}", e.getMessage(), e);
+            conversationStateService.resetToIdle(adminId);
+            return createErrorMessage(chatId, messageId, e.getMessage());
+        }
     }
 
     /**
@@ -103,7 +139,8 @@ public class CallbackQueryHandler {
         ConversationState state = conversationStateService.getState(adminId);
 
         if (state.getState() != BotState.AWAITING_BAN_REASON) {
-            return createErrorMessage(chatId, messageId, BotMessage.ERROR_STATE_FOR_REASON.raw());
+            return createErrorMessage(chatId, messageId,
+                    "⚠️ Ошибка: неверное состояние для выбора причины.");
         }
 
         try {
@@ -118,8 +155,9 @@ public class CallbackQueryHandler {
                     BotMessage.ACCEPT_TO_BLOCK.raw(),
                     BotMessage.USER_INFO_EMAIL.format(targetUserEmail),
                     BotMessage.USER_INFO_ID.format(targetUserIdStr),
-                    BotMessage.BAN_REASON.format(readableReason),
-                    BotMessage.ACCEPT_TO_BLOCK_2.raw());
+                    BotMessage.BAN_REASON.format(escapeHtml(readableReason)),
+                    BotMessage.ACCEPT_TO_BLOCK_2.raw()
+            );
 
             EditMessageText message = new EditMessageText();
             message.setChatId(chatId.toString());
@@ -172,9 +210,10 @@ public class CallbackQueryHandler {
      */
     private EditMessageText handleUnblock(String data, Long chatId, Integer messageId, Long adminId) {
         UUID userId = UUID.fromString(data.substring("unblock:".length()));
-
         userService.unblockUser(userId, adminId);
-        auditLogService.logAction("UNBLOCK_USER", adminId, userId, Map.of("source", "callback").toString());
+
+        auditLogService.logAction("UNBLOCK_USER", adminId, userId,
+                Map.of("source", "callback").toString());
 
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId.toString());
@@ -267,6 +306,16 @@ public class CallbackQueryHandler {
         AnswerCallbackQuery answer = new AnswerCallbackQuery();
         answer.setCallbackQueryId(callbackQueryId);
         answer.setText(text);
+
         return answer;
+    }
+
+    /**
+     * Экранирование HTML для Telegram
+     */
+    private String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 }

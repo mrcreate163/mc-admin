@@ -143,43 +143,43 @@ deploy:dev:
     - ssh-keyscan -H $DEV_SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - echo "🚀 Deploying to development server..."
+    - export DOCKER_IMAGE_WITH_TAG="${DOCKER_IMAGE}:${CI_COMMIT_SHORT_SHA}"
     - |
-      ssh $DEV_SERVER_USER@$DEV_SERVER_HOST << EOF
-        set -e
-        
-        echo "📥 Pulling latest image..."
-        docker pull $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
-        
-        echo "🛑 Stopping old container..."
-        docker stop mc-admin || true
-        docker rm mc-admin || true
-        
-        echo "🚀 Starting new container..."
-        docker run -d \
-          --name mc-admin \
-          --network social-network-net \
-          --restart unless-stopped \
-          -p 8091:8091 \
-          -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
-          -e SPRING_DATASOURCE_USERNAME=postgres \
-          -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
-          -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN \
-          -e TELEGRAM_BOT_USERNAME=$TELEGRAM_BOT_USERNAME \
-          -e ADMIN_WHITELIST=$ADMIN_WHITELIST \
-          -e ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account \
-          $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
-        
-        echo "🧹 Cleaning up old images..."
-        docker image prune -f
-        echo "🧹 Removing old mc-admin images, keep last 2..."
-        docker images "mlz777/mc-admin" --format "{{.ID}} {{.CreatedAt}}" \\
-          | sort -k2,3 -r \
-          | tail -n +3 \
-          | awk '{print $1}' \
-          | xargs -r docker rmi || true
-        
-        echo "✅ Deployment complete!"
-        docker ps | grep mc-admin
+      ssh $DEV_SERVER_USER@$DEV_SERVER_HOST \
+        "DOCKER_IMAGE='${DOCKER_IMAGE_WITH_TAG}' \
+         POSTGRES_PASS='${POSTGRES_PASSWORD}' \
+         TELEGRAM_TOKEN='${TELEGRAM_BOT_TOKEN}' \
+         TELEGRAM_USERNAME='${TELEGRAM_BOT_USERNAME}' \
+         ADMIN_LIST='${ADMIN_WHITELIST}' \
+         bash -s" << 'EOF'
+      set -e
+      echo "📥 Pulling latest image: $DOCKER_IMAGE"
+      docker pull "$DOCKER_IMAGE"
+
+      echo "🛑 Stopping old container..."
+      docker stop mc-admin || true
+      docker rm mc-admin || true
+
+      echo "🚀 Starting new container..."
+      docker run -d \
+        --name mc-admin \
+        --network social-network-net \
+        --restart unless-stopped \
+        -p 8091:8091 \
+        -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
+        -e SPRING_DATASOURCE_USERNAME=postgres \
+        -e SPRING_DATASOURCE_PASSWORD="$POSTGRES_PASS" \
+        -e TELEGRAM_BOT_TOKEN="$TELEGRAM_TOKEN" \
+        -e TELEGRAM_BOT_USERNAME="$TELEGRAM_USERNAME" \
+        -e ADMIN_WHITELIST="$ADMIN_LIST" \
+        -e ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account \
+        "$DOCKER_IMAGE"
+
+      echo "🧹 Cleaning up old images..."
+      docker image prune -f
+
+      echo "✅ Deployment complete!"
+      docker ps | grep mc-admin
       EOF
   environment:
     name: development
@@ -203,45 +203,44 @@ deploy:prod:
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H $DEV_SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null
   script:
-    - echo "🚀 Deploying to production server..."
+    - echo "🚀 Deploying to development server..."
+    - export DOCKER_IMAGE_WITH_TAG="${DOCKER_IMAGE}:${CI_COMMIT_SHORT_SHA}"
     - |
-      ssh $DEV_SERVER_USER@$DEV_SERVER_HOST << EOF
-        set -e
-        
-        echo "📥 Pulling latest stable image..."
-        docker pull $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
-        
-        echo "🛑 Stopping old container..."
-        docker stop mc-admin || true
-        docker rm mc-admin || true
-        
-        echo "🚀 Starting new container..."
-        docker run -d \
-          --name mc-admin \
-          --network social-network-net \
-          --restart unless-stopped \
-          -p 8091:8091 \
-          -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
-          -e SPRING_DATASOURCE_USERNAME=postgres \
-          -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
-          -e REDIS_PASSWORD=$REDIS_PASSWORD \
-          -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN \
-          -e TELEGRAM_BOT_USERNAME=$TELEGRAM_BOT_USERNAME \
-          -e ADMIN_WHITELIST=$ADMIN_WHITELIST \
-          -e ACCOUNT_SERVICE_URL=http://mc-account:34135/api/v1/internal/account \
-          $DOCKER_IMAGE:latest
-        
-        echo "🧹 Cleaning up old images..."
-        docker image prune -f
-        echo "🧹 Removing old mc-admin images, keep last 2..."
-        docker images "mlz777/mc-admin" --format "{{.ID}} {{.CreatedAt}}" \\
-          | sort -k2,3 -r \
-          | tail -n +3 \
-          | awk '{print $1}' \
-          | xargs -r docker rmi || true
-      
-        echo "✅ Production deployment complete!"
-        docker ps | grep mc-admin
+      ssh $DEV_SERVER_USER@$DEV_SERVER_HOST \
+        "DOCKER_IMAGE='${DOCKER_IMAGE_WITH_TAG}' \
+         POSTGRES_PASS='${POSTGRES_PASSWORD}' \
+         TELEGRAM_TOKEN='${TELEGRAM_BOT_TOKEN}' \
+         TELEGRAM_USERNAME='${TELEGRAM_BOT_USERNAME}' \
+         ADMIN_LIST='${ADMIN_WHITELIST}' \
+         bash -s" << 'EOF'
+      set -e
+      echo "📥 Pulling latest image: $DOCKER_IMAGE"
+      docker pull "$DOCKER_IMAGE"
+
+      echo "🛑 Stopping old container..."
+      docker stop mc-admin || true
+      docker rm mc-admin || true
+
+      echo "🚀 Starting new container..."
+      docker run -d \
+        --name mc-admin \
+        --network social-network-net \
+        --restart unless-stopped \
+        -p 8091:8091 \
+        -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/admin_bot_db \
+        -e SPRING_DATASOURCE_USERNAME=postgres \
+        -e SPRING_DATASOURCE_PASSWORD="$POSTGRES_PASS" \
+        -e TELEGRAM_BOT_TOKEN="$TELEGRAM_TOKEN" \
+        -e TELEGRAM_BOT_USERNAME="$TELEGRAM_USERNAME" \
+        -e ADMIN_WHITELIST="$ADMIN_LIST" \
+        -e ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account \
+        "$DOCKER_IMAGE"
+
+      echo "🧹 Cleaning up old images..."
+      docker image prune -f
+
+      echo "✅ Deployment complete!"
+      docker ps | grep mc-admin
       EOF
   environment:
     name: production

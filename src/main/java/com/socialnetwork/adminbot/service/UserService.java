@@ -88,4 +88,17 @@ public class UserService {
         log.debug("Fetching users page: page={}, size={}", page, size);
         return accountClient.getAccountsPage(page, size, "regDate,desc");
     }
+
+    /**
+     * Поиск пользователей по email с пагинацией
+     *
+     * @param email поисковый запрос (email или часть email)
+     * @param page номер страницы (начиная с 0)
+     * @param size размер страницы
+     * @return PageAccountDto с результатами поиска
+     */
+    public PageAccountDto searchUsersByEmail(String email, int page, int size) {
+        log.debug("Searching users by email: email='{}', page={}, size={}", email, page, size);
+        return accountClient.searchAccountsByEmail(email, page, size);
+    }
 }

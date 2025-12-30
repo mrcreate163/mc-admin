@@ -21,10 +21,7 @@ public class TextMessageHandler {
 
     private final ConversationStateService conversationStateService;
     private final BanCommandHandler banCommandHandler;
-
-    // Stateful handlers будут добавлены позже
-    // private final SearchConversationHandler searchHandler;
-    // private final BanConversationHandler banHandler;
+    private final SearchCommandHandler searchCommandHandler;
 
     /**
      * Обработать текстовое сообщение в зависимости от состояния
@@ -33,25 +30,30 @@ public class TextMessageHandler {
         ConversationState state = conversationStateService.getState(adminId);
         BotState currentState = state.getState();
 
-        log.debug("Processing text message for user {} in state {}", adminId, currentState);
+        Long chatId = message.getChatId();
+        String text = message.getText();
+
+        log.debug("Handling text message: state={}, text='{}', user={}",
+                currentState, text, adminId);
 
         // Роутинг по состояниям
         switch (currentState) {
             case IDLE:
                 return handleIdleState(message);
 
-            case AWAITING_SEARCH_QUERY:
-                // return searchHandler.handleSearchQuery(message, adminId, state);
-                return createTemporaryMessage(message.getChatId(),
-                        "Search handler coming soon in v2.0");
-
             case AWAITING_BAN_REASON:
-                 return banCommandHandler.handleConversationStep(message, adminId, state);
+                return banCommandHandler.handleConversationStep(message, adminId, state);
+
+            case AWAITING_SEARCH_QUERY:
+                return searchCommandHandler.processSearchQuery(message.getChatId(), adminId, text);
 
             case AWAITING_ADMIN_TELEGRAM_ID:
                 // return adminManagementHandler.handleTelegramId(message, adminId, state);
                 return createTemporaryMessage(message.getChatId(),
                         "Admin management handler coming soon in v2.0");
+
+            case SHOWING_SEARCH_RESULTS:
+                return handleSearchResultsState(chatId, text, adminId);
 
             default:
                 log.warn("Unhandled state: {} for user {}", currentState, adminId);
@@ -67,6 +69,20 @@ public class TextMessageHandler {
     private SendMessage handleIdleState(Message message) {
         return createMessage(message.getChatId(),
                 BotMessage.ERROR_UNKNOWN_COMMAND.raw());
+    }
+
+    /**
+     * Обработка текста в состоянии SHOWING_SEARCH_RESULTS
+     */
+    private SendMessage handleSearchResultsState(Long chatId, String text, Long adminId) {
+        log.debug("Text message during search results: '{}'", text);
+
+        // Если пользователь вводит новый поисковый запрос
+        if (text.length() >= 3) {
+            return searchCommandHandler.processSearchQuery(chatId, adminId, text);
+        }
+
+        return createMessage(chatId, BotMessage.NAVIGATION_HINT.raw());
     }
 
     private SendMessage createMessage(Long chatId, String text) {

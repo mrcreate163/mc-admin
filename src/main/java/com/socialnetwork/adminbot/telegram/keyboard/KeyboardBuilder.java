@@ -1,6 +1,7 @@
 package com.socialnetwork.adminbot.telegram.keyboard;
 
 
+import com.socialnetwork.adminbot.dto.AccountDto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -56,9 +57,9 @@ public class KeyboardBuilder {
     /**
      * Клавиатура с причинами бана
      * Структура:
-     *       [ 🚫 Спам ]      [😡 Harassment]
-     *       [🤖 Bot/Fake] [️ Нарушение правил]
-     *               [❌ Отмена]
+     * [ 🚫 Спам ]      [😡 Harassment]
+     * [🤖 Bot/Fake] [️ Нарушение правил]
+     * [❌ Отмена]
      */
     public static InlineKeyboardMarkup buildBanReasonsKeyboard() {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -235,6 +236,99 @@ public class KeyboardBuilder {
     }
 
     /**
+     * Клавиатура для результатов поиска с действиями и пагинацией
+     *
+     * Структура:
+     * [ 👁 Просмотр | 🚫 Бан ] для каждого пользователя
+     * ...
+     * [ ◀️ Назад ] [ Страница X/Y ] [ Вперёд ▶️ ]
+     * [ 🔍 Новый поиск ] [ ❌ Отмена ]
+     *
+     * @param users       список пользователей на текущей странице
+     * @param currentPage текущая страница (0-based)
+     * @param totalPages  общее количество страниц
+     * @return готовая inline клавиатура
+     */
+    public static InlineKeyboardMarkup buildSearchResultsKeyboard(
+            List<AccountDto> users,
+            int currentPage,
+            int totalPages
+    ) {
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        // Кнопки действий для каждого пользователя
+        for (int i = 0; i < users.size(); i++) {
+            AccountDto user = users.get(i);
+            int userNumber = currentPage * 5 + i + 1; // 5 = PAGE_SIZE
+
+            List<InlineKeyboardButton> row = new ArrayList<>();
+
+            // Кнопка "Просмотр"
+            row.add(createButton(
+                    String.format("%d. 👁 Просмотр", userNumber),
+                    "search_view:" + user.getId()
+            ));
+
+            // Кнопка "Бан" или "Разбан"
+            if (user.getIsBlocked()) {
+                row.add(createButton(
+                        "✅ Разбан",
+                        "search_unban:" + user.getId()
+                ));
+            } else {
+                row.add(createButton(
+                        "🚫 Бан",
+                        "search_ban:" + user.getId()
+                ));
+            }
+
+            keyboard.add(row);
+        }
+
+        // Разделитель
+        keyboard.add(List.of(createButton("─────────", "noop")));
+
+        // Кнопки пагинации (если больше одной страницы)
+        if (totalPages > 1) {
+            List<InlineKeyboardButton> paginationRow = new ArrayList<>();
+
+            // Кнопка "Назад" (если не первая страница)
+            if (currentPage > 0) {
+                paginationRow.add(createButton(
+                        "◀️ Назад",
+                        "search_page:" + (currentPage - 1)
+                ));
+            }
+
+            // Индикатор текущей страницы
+            paginationRow.add(createButton(
+                    String.format("📄 %d/%d", currentPage + 1, totalPages),
+                    "noop"
+            ));
+
+            // Кнопка "Вперёд" (если не последняя страница)
+            if (currentPage < totalPages - 1) {
+                paginationRow.add(createButton(
+                        "Вперёд ▶️",
+                        "search_page:" + (currentPage + 1)
+                ));
+            }
+
+            keyboard.add(paginationRow);
+        }
+
+        // Кнопки управления
+        keyboard.add(Arrays.asList(
+                createButton("🔍 Новый поиск", "search_new"),
+                createButton("❌ Закрыть", "search_cancel")
+        ));
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(keyboard);
+        return markup;
+    }
+
+    /**
      * Создаёт InlineKeyboardMarkup из списка рядов кнопок.
      *
      * @param rows список рядов кнопок
@@ -245,4 +339,5 @@ public class KeyboardBuilder {
         keyboard.setKeyboard(rows);
         return keyboard;
     }
+
 }

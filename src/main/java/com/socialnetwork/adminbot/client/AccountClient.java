@@ -153,4 +153,49 @@ public class AccountClient {
             throw new ServiceException("Account service unavailable");
         }
     }
+
+    /**
+     * Поиск аккаунтов по email с пагинацией
+     *
+     * @param email поисковый запрос (email или часть email)
+     * @param page номер страницы (начиная с 0)
+     * @param size размер страницы
+     * @return PageAccountDto с результатами поиска
+     */
+    public PageAccountDto searchAccountsByEmail(String email, int page, int size) {
+        try {
+            UriComponentsBuilder builder = UriComponentsBuilder
+                    .fromUriString(accountServiceUrl + "/search")
+                    .queryParam("email", email)
+                    .queryParam("page", page)
+                    .queryParam("size", size)
+                    .queryParam("sort", "regDate,desc");
+
+            String url = builder.toUriString();
+            log.debug("Searching accounts by email: GET {}", url);
+
+            ResponseEntity<PageAccountDto> response = restTemplate.getForEntity(
+                    url,
+                    PageAccountDto.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                PageAccountDto result = response.getBody();
+                log.debug("Found {} accounts matching email '{}'",
+                        result.getTotalElements(), email);
+                return result;
+            }
+
+            throw new ServiceException("Failed to search accounts by email");
+
+        } catch (HttpServerErrorException e) {
+            log.error("Account service error during search: {} {}",
+                    e.getStatusCode(), e.getMessage());
+            throw new ServiceException("Account service error: " + e.getMessage());
+        } catch (ResourceAccessException e) {
+            log.error("Account service unavailable during search: {}", e.getMessage());
+            throw new ServiceException("Account service unavailable");
+        }
+    }
+
 }

@@ -6,6 +6,7 @@ import com.socialnetwork.adminbot.service.AdminService;
 import com.socialnetwork.adminbot.service.ConversationStateService;
 import com.socialnetwork.adminbot.telegram.handler.*;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
+import io.lettuce.core.protocol.CommandHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -32,6 +34,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final UserCommandHandler userCommandHandler;
     private final StatsCommandHandler statsCommandHandler;
     private final BanCommandHandler banCommandHandler;
+    private final SearchCommandHandler searchCommandHandler;
     private final CallbackQueryHandler callbackQueryHandler;
     private final TextMessageHandler textMessageHandler;
 
@@ -45,6 +48,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             UserCommandHandler userCommandHandler,
             StatsCommandHandler statsCommandHandler,
             BanCommandHandler banCommandHandler,
+            SearchCommandHandler searchCommandHandler,
             CallbackQueryHandler callbackQueryHandler,
             TextMessageHandler textMessageHandler,
             @Value("${admin.whitelist}") String adminWhitelistStr
@@ -58,7 +62,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.statsCommandHandler = statsCommandHandler;
         this.banCommandHandler = banCommandHandler;
         this.callbackQueryHandler = callbackQueryHandler;
+        this.searchCommandHandler = searchCommandHandler;
         this.textMessageHandler = textMessageHandler;
+
+        //Регистрация handlers по имени команды
 
         // Parse admin whitelist from configuration
         this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
@@ -153,6 +160,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             return banCommandHandler.handle(message, userId);
         } else if (text.startsWith("/unban")) {
             return banCommandHandler.handleUnban(message, userId);
+        } else if (text.startsWith("/search")) {
+            return searchCommandHandler.handle(message, userId);
         } else {
             return createMessage(message.getChatId(),
                     BotMessage.ERROR_UNKNOWN_COMMAND.raw());

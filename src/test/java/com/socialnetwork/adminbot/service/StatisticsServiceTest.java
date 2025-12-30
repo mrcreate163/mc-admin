@@ -86,10 +86,10 @@ class StatisticsServiceTest {
     }
 
     @Test
-    @DisplayName("getStatistics - should handle null totalElements")
-    void getStatistics_WhenTotalElementsNull_ShouldReturnZeroTotalUsers() {
+    @DisplayName("getStatistics - should handle zero totalElements")
+    void getStatistics_WhenTotalElementsZero_ShouldReturnZeroTotalUsers() {
         // Given
-        pageAccountDto.setTotalElements(null);
+        pageAccountDto.setTotalElements(0L);
         when(userService.getUsersPage(0, 1)).thenReturn(pageAccountDto);
         when(auditLogRepository.countByActionTypeAndCreatedAtAfter(eq("USER_REGISTERED"), any(LocalDateTime.class)))
                 .thenReturn(0L);

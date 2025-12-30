@@ -11,7 +11,8 @@ Telegram-бот для администрирования социальной �
 
 - [Технологический стек](#технологический-стек)
 - [Архитектура](#архитектура)
-- [Возможности](#возможности-v10-mvp)
+- [State Machine](#state-machine)
+- [Возможности](#возможности-v20)
 - [Быстрый старт](#быстрый-старт)
 - [Конфигурация](#конфигурация)
 - [База данных](#база-данных)
@@ -23,23 +24,23 @@ Telegram-бот для администрирования социальной �
 
 ## 🛠 Технологический стек
 
-| Категория | Технология                   |
-|-----------|------------------------------|
-| **Язык** | Java 21                      |
-| **Фреймворк** | Spring Boot 4.0.1            |
-| **Web** | Spring Web (REST клиенты)    |
-| **Данные** | Spring Data JPA + PostgreSQL |
-| **Миграции** | Liquibase                    |
-| **Кеш** | Spring Data Redis            |
-| **Сообщения** | Spring Kafka (для v2.0+)     |
-| **Telegram** | TelegramBots 6.9.7.1         |
-| **Сборка** | Maven                        |
-| **Контейнеризация** | Docker                       |
-| **CI/CD** | GitLab CI                    |
+| Категория | Технология                      |
+|-----------|---------------------------------|
+| **Язык** | Java 17                         |
+| **Фреймворк** | Spring Boot 4.0.1               |
+| **Web** | Spring Web (REST клиенты)       |
+| **Данные** | Spring Data JPA + PostgreSQL    |
+| **Миграции** | Liquibase                       |
+| **Кеш/State** | Spring Data Redis (State Machine) |
+| **Сообщения** | Spring Kafka (для v3.0+)        |
+| **Telegram** | TelegramBots 6.9.7.1            |
+| **Сборка** | Maven                           |
+| **Контейнеризация** | Docker                          |
+| **CI/CD** | GitLab CI                       |
 
 ## 🏗 Архитектура
 
-Классическая трёхслойная архитектура с выделенным слоем для Telegram:
+Классическая трёхслойная архитектура с выделенным слоем для Telegram и State Machine:
 
 ```
 src/main/java/com/socialnetwork/adminbot/
@@ -47,8 +48,22 @@ src/main/java/com/socialnetwork/adminbot/
 │   ├── RedisConfig.java
 │   ├── RestTemplateConfig.java
 │   └── TelegramBotConfig.java
+├── domain/          # Модели State Machine
+│   ├── BotState.java           # Перечисление состояний
+│   ├── ConversationState.java  # Модель состояния диалога
+│   └── StateDataKey.java       # Константы ключей данных
 ├── telegram/        # Telegram бот и обработчики
 │   ├── handler/     # Обработчики команд
+│   │   ├── base/    # Базовые классы handlers
+│   │   │   ├── BaseCommandHandler.java
+│   │   │   ├── StatefulCommandHandler.java
+│   │   │   └── StatelessCommandHandler.java
+│   │   ├── StartCommandHandler.java
+│   │   ├── UserCommandHandler.java
+│   │   ├── BanCommandHandler.java
+│   │   ├── SearchCommandHandler.java
+│   │   ├── TextMessageHandler.java
+│   │   └── CallbackQueryHandler.java
 │   ├── keyboard/    # Inline клавиатуры
 │   ├── messages/    # Шаблоны сообщений
 │   └── TelegramBot.java
@@ -56,7 +71,9 @@ src/main/java/com/socialnetwork/adminbot/
 │   ├── AdminService.java
 │   ├── UserService.java
 │   ├── StatisticsService.java
-│   └── AuditLogService.java
+│   ├── AuditLogService.java
+│   ├── ConversationStateService.java   # Управление состояниями в Redis
+│   └── StateTransitionService.java     # Валидация переходов
 ├── repository/      # Слой доступа к данным
 ├── entity/          # JPA сущности
 ├── dto/             # Data Transfer Objects
@@ -71,16 +88,85 @@ src/main/java/com/socialnetwork/adminbot/
 │   Telegram   │ ───► │  Admin Bot       │ ───► │  mc-account      │
 │   Bot API    │ ◄─── │  Service         │ ◄─── │  (User Service)  │
 └──────────────┘      └──────────────────┘      └──────────────────┘
-                              │
-                              ▼
-                      ┌──────────────────┐
-                      │   PostgreSQL     │
-                      │   (admins,       │
-                      │    audit_log)    │
-                      └──────────────────┘
+                              │  │
+                              │  └─────────────────┐
+                              ▼                    ▼
+                      ┌──────────────────┐  ┌──────────────────┐
+                      │   PostgreSQL     │  │      Redis       │
+                      │   (admins,       │  │   (State Machine │
+                      │    audit_log)    │  │    States)       │
+                      └──────────────────┘  └──────────────────┘
 ```
 
-## ⭐ Возможности (v1.0 MVP)
+## 🔄 State Machine
+
+### Описание
+
+State Machine реализован через Redis для управления многоэтапными диалогами с пользователями. Каждый пользователь имеет своё состояние, которое хранится в Redis с TTL 30 минут.
+
+### Состояния (BotState)
+
+| Состояние | Описание |
+|-----------|----------|
+| `IDLE` | Начальное состояние - пользователь не в диалоге |
+| `AWAITING_SEARCH_QUERY` | Ожидание ввода поискового запроса |
+| `SHOWING_SEARCH_RESULTS` | Отображение результатов поиска (с пагинацией) |
+| `AWAITING_BAN_REASON` | Ожидание причины бана пользователя |
+| `CONFIRMING_BAN` | Подтверждение бана пользователя |
+| `AWAITING_ADMIN_TELEGRAM_ID` | Ожидание Telegram ID для добавления админа (v3.0) |
+| `AWAITING_ADMIN_ROLE` | Ожидание выбора роли для нового админа (v3.0) |
+| `CONFIRMING_ADMIN_CREATION` | Подтверждение создания нового админа (v3.0) |
+
+### Диаграмма переходов
+
+```
+                           ┌────────────────────────────────────────┐
+                           │                                        │
+                           ▼                                        │
+                       ┌──────┐                                     │
+           ┌──────────►│ IDLE │◄────────────────────────────────────┤
+           │           └──────┘                                     │
+           │               │                                        │
+           │    ┌──────────┼──────────┐                             │
+           │    ▼          ▼          ▼                             │
+           │ ┌────────┐ ┌────────┐ ┌────────┐                       │
+           │ │AWAITING│ │AWAITING│ │AWAITING│                       │
+           │ │ SEARCH │ │  BAN   │ │ ADMIN  │                       │
+           │ │ QUERY  │ │ REASON │ │TELEGRAM│                       │
+           │ └────────┘ └────────┘ └────────┘                       │
+           │     │           │          │                           │
+           │     ▼           ▼          ▼                           │
+           │ ┌────────┐ ┌────────┐ ┌────────┐                       │
+           │ │SHOWING │ │CONFIRM │ │AWAITING│                       │
+           │ │ SEARCH │ │  BAN   │ │ ADMIN  │                       │
+           │ │RESULTS │ │        │ │  ROLE  │                       │
+           │ └────────┘ └────────┘ └────────┘                       │
+           │     │           │          │                           │
+           │     │           │          ▼                           │
+           │     │           │     ┌────────┐                       │
+           │     │           │     │CONFIRM │                       │
+           │     │           │     │ ADMIN  │                       │
+           │     │           │     │CREATION│                       │
+           │     │           │     └────────┘                       │
+           │     │           │          │                           │
+           └─────┴───────────┴──────────┴───────────────────────────┘
+```
+
+### Типы Handler'ов
+
+- **StatelessCommandHandler** - для простых команд без диалога (`/start`, `/stats`, `/help`)
+- **StatefulCommandHandler** - для диалоговых команд (`/search`, `/ban`)
+
+### Ключевые компоненты
+
+| Компонент | Описание |
+|-----------|----------|
+| `ConversationState` | Модель состояния с данными контекста и версионированием |
+| `ConversationStateService` | CRUD операции для состояний в Redis |
+| `StateTransitionService` | Валидация разрешённых переходов между состояниями |
+| `TextMessageHandler` | Роутинг текстовых сообщений по текущему состоянию |
+
+## ⭐ Возможности (v2.0)
 
 ### Telegram команды
 
@@ -88,13 +174,18 @@ src/main/java/com/socialnetwork/adminbot/
 |---------|----------|
 | `/start` | Приветственное сообщение и главное меню |
 | `/user <id>` | Просмотр информации о пользователе |
-| `/ban <id>` | Заблокировать пользователя |
+| `/ban <id>` | Заблокировать пользователя (с выбором причины) |
 | `/unban <id>` | Разблокировать пользователя |
+| `/search [query]` | Поиск пользователей по email |
 | `/stats` | Статистика платформы |
+| `/cancel` | Отменить текущее действие |
 
 ### Функции администратора
 
 - ✅ **Управление пользователями**: просмотр, блокировка/разблокировка
+- ✅ **Поиск пользователей**: поиск по email с пагинацией
+- ✅ **Блокировка с причиной**: выбор причины из предустановленных или ввод своей
+- ✅ **State Machine**: многоэтапные диалоги с хранением состояния в Redis
 - ✅ **Статистика**: общее количество, новые за сегодня, заблокированные
 - ✅ **Аудит**: все действия администраторов логируются в БД
 - ✅ **Inline-клавиатуры**: интерактивные кнопки для быстрых действий
@@ -243,15 +334,22 @@ src/test/java/com/socialnetwork/adminbot/
 ├── AdminBotApplicationTests.java    # Интеграционный тест контекста
 ├── client/
 │   └── AccountClientTest.java       # Тесты HTTP клиента
+├── domain/
+│   └── ConversationStateTest.java   # Тесты модели состояния
 ├── service/
 │   ├── AdminServiceTest.java        # Тесты сервиса админов
 │   ├── UserServiceTest.java         # Тесты сервиса пользователей
 │   ├── AuditLogServiceTest.java     # Тесты аудит логов
-│   └── StatisticsServiceTest.java   # Тесты статистики
+│   ├── StatisticsServiceTest.java   # Тесты статистики
+│   ├── ConversationStateServiceTest.java  # Тесты State Machine сервиса
+│   └── StateTransitionServiceTest.java   # Тесты валидации переходов
 ├── telegram/handler/
 │   ├── StartCommandHandlerTest.java
 │   ├── UserCommandHandlerTest.java
 │   ├── BanCommandHandlerTest.java
+│   ├── SearchCommandHandlerTest.java    # Тесты поиска с пагинацией
+│   ├── CallbackQueryHandlerTest.java
+│   ├── TextMessageHandlerTest.java
 │   └── StatsCommandHandlerTest.java
 ├── telegram/messages/
 │   └── BotMessageTest.java          # Тесты шаблонов сообщений
@@ -259,7 +357,7 @@ src/test/java/com/socialnetwork/adminbot/
     └── DtoTest.java                 # Тесты DTO
 ```
 
-**Текущее покрытие: 66 тестов**
+**Текущее покрытие: 158 тестов**
 
 ## 🚢 Развёртывание
 
@@ -313,12 +411,13 @@ docker run -d \
 
 Все запросы идут на internal API:
 
-| Метод   | Endpoint                                 | Описание               |
-|---------|------------------------------------------|------------------------|
-| GET     | `api/v1/internal/account/{id}`           | Получить аккаунт по ID |
-| PUT     | `api/v1/internal/account/block/{id}`     | Заблокировать аккаунт  |
-| DELETE  | `api/v1/internal/account/block/{id}`     | Разблокировать аккаунт |
-| GET     | `api/v1/internal/account?page=0&size=10` | Список аккаунтов       |
+| Метод   | Endpoint                                  | Описание                |
+|---------|-------------------------------------------|-------------------------|
+| GET     | `api/v1/internal/account/{id}`            | Получить аккаунт по ID  |
+| PUT     | `api/v1/internal/account/block/{id}`      | Заблокировать аккаунт   |
+| DELETE  | `api/v1/internal/account/block/{id}`      | Разблокировать аккаунт  |
+| GET     | `api/v1/internal/account?page=0&size=10`  | Список аккаунтов        |
+| GET     | `api/v1/internal/account/search?email=...`| Поиск по email          |
 
 ## 💻 Разработка
 
@@ -344,7 +443,7 @@ docs: обновлён README
 
 ## 🗺 Roadmap
 
-### v1.0 (Текущая) ✅
+### v1.0 ✅
 
 - [x] Базовая аутентификация (whitelist)
 - [x] Команды управления пользователями
@@ -353,21 +452,24 @@ docs: обновлён README
 - [x] Inline-клавиатуры
 - [x] Unit-тестирование
 
-### v2.0 (Планируется)
+### v2.0 (Текущая) ✅
 
-- [ ] Управление администраторами через БД
-- [ ] State Machine через Redis
-- [ ] Расширенная статистика с графиками
-- [ ] Дополнительные функции модерации
-- [ ] Поиск пользователей
-- [ ] Foreign Key Constraint для Admin в AuditLog
+- [x] State Machine через Redis
+- [x] Поиск пользователей с пагинацией
+- [x] Блокировка с выбором причины
+- [x] Многоэтапные диалоги
+- [x] Команда /cancel для отмены действий
+- [x] Расширенное тестирование (158 тестов)
 
 ### v3.0 (Планируется)
 
+- [ ] Управление администраторами через БД
 - [ ] Интеграция с Kafka для событий
 - [ ] Real-time уведомления
+- [ ] Расширенная статистика с графиками
 - [ ] Продвинутая аналитика
 - [ ] Поддержка нескольких языков
+- [ ] Foreign Key Constraint для Admin в AuditLog
 
 ## 📄 Лицензия
 

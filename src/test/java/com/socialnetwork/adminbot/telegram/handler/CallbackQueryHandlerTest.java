@@ -48,6 +48,9 @@ class CallbackQueryHandlerTest {
     @Mock
     private BanCommandHandler banCommandHandler;
 
+    @Mock
+    private SearchCommandHandler searchCommandHandler;
+
     private CallbackQueryHandler callbackQueryHandler;
 
     private CallbackQuery mockCallbackQuery;
@@ -66,7 +69,8 @@ class CallbackQueryHandlerTest {
                 auditLogService,
                 conversationStateService,
                 stateTransitionService,
-                banCommandHandler
+                banCommandHandler,
+                searchCommandHandler
         );
 
         mockCallbackQuery = mock(CallbackQuery.class);

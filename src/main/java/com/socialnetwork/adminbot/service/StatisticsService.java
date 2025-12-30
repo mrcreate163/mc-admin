@@ -22,7 +22,7 @@ public class StatisticsService {
             // Get first page to extract totals
             PageAccountDto firstPage = userService.getUsersPage(0, 1);
 
-            Long totalUsers = firstPage.getTotalElements();
+            long totalUsers = firstPage.getTotalElements();
             
             // Calculate new users today
             LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -31,7 +31,7 @@ public class StatisticsService {
             // For MVP, we'll use simplified statistics
             // In future versions, we can add more detailed statistics from the account service
             return StatisticsDto.builder()
-                    .totalUsers(totalUsers != null ? totalUsers : 0L)
+                    .totalUsers(totalUsers)
                     .activeUsers(0L) // Will be implemented in v2.0
                     .blockedUsers(0L) // Will be implemented in v2.0
                     .newUsersToday(newUsersToday)

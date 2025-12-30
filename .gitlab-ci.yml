@@ -233,7 +233,7 @@ deploy:prod:
         -e TELEGRAM_BOT_TOKEN="$TELEGRAM_TOKEN" \
         -e TELEGRAM_BOT_USERNAME="$TELEGRAM_USERNAME" \
         -e ADMIN_WHITELIST="$ADMIN_LIST" \
-        -e ACCOUNT_SERVICE_URL=http://mc-account:8080/internal/account \
+        -e ACCOUNT_SERVICE_URL=http://mc-account:34135/internal/account \
         "$DOCKER_IMAGE"
 
       echo "🧹 Cleaning up old images..."

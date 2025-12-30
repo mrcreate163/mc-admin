@@ -29,6 +29,9 @@ class TextMessageHandlerTest {
     @Mock
     private BanCommandHandler banCommandHandler;
 
+    @Mock
+    private SearchCommandHandler searchCommandHandler;
+
     private TextMessageHandler textMessageHandler;
 
     private Message mockMessage;
@@ -37,7 +40,7 @@ class TextMessageHandlerTest {
 
     @BeforeEach
     void setUp() {
-        textMessageHandler = new TextMessageHandler(conversationStateService, banCommandHandler);
+        textMessageHandler = new TextMessageHandler(conversationStateService, banCommandHandler, searchCommandHandler);
         mockMessage = mock(Message.class);
         lenient().when(mockMessage.getChatId()).thenReturn(CHAT_ID);
     }
@@ -104,22 +107,30 @@ class TextMessageHandlerTest {
     class AwaitingSearchQueryStateTests {
 
         @Test
-        @DisplayName("handle - should return coming soon message for search query state")
-        void handle_WhenInAwaitingSearchQueryState_ShouldReturnComingSoonMessage() {
+        @DisplayName("handle - should delegate to SearchCommandHandler when in AWAITING_SEARCH_QUERY state")
+        void handle_WhenInAwaitingSearchQueryState_ShouldDelegateToSearchHandler() {
             // Given
+            String searchQuery = "test@example.com";
             ConversationState searchState = ConversationState.builder()
                     .state(BotState.AWAITING_SEARCH_QUERY)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
             when(conversationStateService.getState(ADMIN_TELEGRAM_ID)).thenReturn(searchState);
+            when(mockMessage.getText()).thenReturn(searchQuery);
+
+            SendMessage expectedResponse = new SendMessage();
+            expectedResponse.setChatId(CHAT_ID.toString());
+            expectedResponse.setText("Search results");
+            when(searchCommandHandler.processSearchQuery(CHAT_ID, ADMIN_TELEGRAM_ID, searchQuery))
+                    .thenReturn(expectedResponse);
 
             // When
             SendMessage result = textMessageHandler.handle(mockMessage, ADMIN_TELEGRAM_ID);
 
             // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getText()).contains("coming soon");
+            assertThat(result).isEqualTo(expectedResponse);
+            verify(searchCommandHandler).processSearchQuery(CHAT_ID, ADMIN_TELEGRAM_ID, searchQuery);
         }
     }
 

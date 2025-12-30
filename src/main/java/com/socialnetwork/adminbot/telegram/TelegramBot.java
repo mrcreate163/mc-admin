@@ -6,7 +6,6 @@ import com.socialnetwork.adminbot.service.AdminService;
 import com.socialnetwork.adminbot.service.ConversationStateService;
 import com.socialnetwork.adminbot.telegram.handler.*;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
-import io.lettuce.core.protocol.CommandHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -20,7 +19,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component

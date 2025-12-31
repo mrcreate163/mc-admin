@@ -572,7 +572,7 @@ public class CallbackQueryHandler {
                 BotMessage.USER_INFO_BLOCKED.format(
                         Boolean.TRUE.equals(user.getIsBlocked()) ? BotMessage.STATUS_BLOCKED.raw() : BotMessage.STATUS_ACTIVE.raw()),
                 BotMessage.USER_INFO_ABOUT.format(
-                        user.getAbout() != null ? user.getAbout() : BotMessage.STATUS_UNKNOWN.raw())
+                        user.getAbout() != null ? escapeForFormat(escapeHtml(user.getAbout())) : BotMessage.STATUS_UNKNOWN.raw())
         );
     }
 
@@ -583,5 +583,16 @@ public class CallbackQueryHandler {
         return text.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    /**
+     * Экранирование символа % для String.format()
+     * CRITICAL: без этого метода будет Exception если пользовательские данные содержат %
+     */
+    private String escapeForFormat(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("%", "%%");
     }
 }

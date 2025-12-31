@@ -364,7 +364,7 @@ public class CallbackQueryHandler {
             Long adminId
     ) {
         try {
-            UUID userId = UUID.fromString(data.substring("search_view:".length()));
+            UUID userId = UUID.fromString(data.substring("search_view:".length()).trim());
             AccountDto user = userService.getUserById(userId);
 
             // Логируем действие
@@ -382,7 +382,7 @@ public class CallbackQueryHandler {
 
             return message;
         } catch (IllegalArgumentException e) {
-            log.error("Invalid user ID in search_view callback: {}", data);
+            log.error("Invalid user ID in search_view callback: {}, error: {}", data, e.getMessage());
             return createErrorMessage(chatId, messageId, "⚠️ Неверный ID пользователя");
         } catch (Exception e) {
             log.error("Error viewing user from search: {}", e.getMessage(), e);

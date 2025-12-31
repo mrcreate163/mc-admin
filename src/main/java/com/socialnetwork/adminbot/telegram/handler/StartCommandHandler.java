@@ -28,7 +28,9 @@ public class StartCommandHandler {
                         BotMessage.CMD_USER.raw(),
                         BotMessage.CMD_BAN.raw(),
                         BotMessage.CMD_UNBAN.raw(),
-                        BotMessage.CMD_STATS.raw()
+                        BotMessage.CMD_STATS.raw(),
+                        BotMessage.CMD_SEARCH.raw()
+
                 ),
                 BotMessage.WELCOME_FOOTER.raw()
         );

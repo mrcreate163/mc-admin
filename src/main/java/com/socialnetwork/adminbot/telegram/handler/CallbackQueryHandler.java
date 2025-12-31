@@ -550,49 +550,53 @@ public class CallbackQueryHandler {
 
     /**
      * Форматирование детальной информации о пользователе
+     * ВАЖНО: НЕ используем BotMessage.format() для пользовательских данных,
+     * т.к. они могут содержать символ % который вызовет IllegalFormatException
      */
     private String formatUserDetails(AccountDto user) {
-        return String.join("\n\n",
-                BotMessage.USER_INFO_TITLE.raw(),
-                BotMessage.USER_INFO_ID.format(user.getId()),
-                BotMessage.USER_INFO_EMAIL_2.format(escapeHtml(user.getEmail())),
-                BotMessage.USER_INFO_NAME_2.format(escapeHtml(user.getFirstName())),
-                BotMessage.USER_INFO_PHONE.format(
-                        user.getPhone() != null ? user.getPhone() : BotMessage.STATUS_UNKNOWN.raw()),
-                BotMessage.USER_INFO_COUNTRY.format(
-                        user.getCountry() != null ? user.getCountry() : BotMessage.STATUS_UNKNOWN.raw()),
-                BotMessage.USER_INFO_BIRTH_DATE.format(
-                        user.getBirthDate() != null ? user.getBirthDate() : BotMessage.STATUS_UNKNOWN.raw()),
-                BotMessage.USER_INFO_REGISTERED.format(
-                        user.getRegDate() != null ? user.getRegDate() : BotMessage.STATUS_UNKNOWN.raw()),
-                BotMessage.USER_INFO_LAST_ONLINE.format(
-                        user.getLastOnlineTime() != null ? user.getLastOnlineTime() : BotMessage.STATUS_UNKNOWN.raw()),
-                BotMessage.USER_INFO_ONLINE.format(
-                        Boolean.TRUE.equals(user.getIsOnline()) ? BotMessage.STATUS_ONLINE.raw() : BotMessage.STATUS_OFFLINE.raw()),
-                BotMessage.USER_INFO_BLOCKED.format(
-                        Boolean.TRUE.equals(user.getIsBlocked()) ? BotMessage.STATUS_BLOCKED.raw() : BotMessage.STATUS_ACTIVE.raw()),
-                BotMessage.USER_INFO_ABOUT.format(
-                        user.getAbout() != null ? escapeForFormat(escapeHtml(user.getAbout())) : BotMessage.STATUS_UNKNOWN.raw())
-        );
+        // Безопасное экранирование всех пользовательских данных
+        String safeFirstName = escapeHtml(user.getFirstName() != null ? user.getFirstName() : "N/A");
+        String safeLastName = escapeHtml(user.getLastName() != null ? user.getLastName() : "N/A");
+        String safeEmail = escapeHtml(user.getEmail() != null ? user.getEmail() : "N/A");
+        String safePhone = escapeHtml(user.getPhone() != null ? user.getPhone() : "N/A");
+        String safeCountry = escapeHtml(user.getCountry() != null ? user.getCountry() : "N/A");
+        String safeCity = escapeHtml(user.getCity() != null ? user.getCity() : "N/A");
+        String safeBirthDate = user.getBirthDate() != null ? user.getBirthDate().toString() : "N/A";
+        String safeRegDate = user.getRegDate() != null ? user.getRegDate().toString() : "N/A";
+        String safeLastOnline = user.getLastOnlineTime() != null ? user.getLastOnlineTime().toString() : "N/A";
+        String safeAbout = escapeHtml(user.getAbout() != null ? user.getAbout() : "N/A");
+
+        String onlineStatus = Boolean.TRUE.equals(user.getIsOnline()) ? "✅ Да" : "❌ Нет";
+        String blockedStatus = Boolean.TRUE.equals(user.getIsBlocked()) ? "🔴 Да" : "🟢 Нет";
+
+        // Формируем текст напрямую без String.format для пользовательских данных
+        return "👤 <b>Информация о пользователе</b>\n\n" +
+                "🆔 ID: <code>" + user.getId() + "</code>\n" +
+                "📧 Email: <code>" + safeEmail + "</code>\n" +
+                "👤 Имя: " + safeFirstName + " " + safeLastName + "\n" +
+                "📱 Телефон: " + safePhone + "\n" +
+                "🌍 Страна: " + safeCountry + "\n" +
+                "🏙️ Город: " + safeCity + "\n" +
+                "📅 Дата регистрации: " + safeRegDate + "\n" +
+                "🎂 Дата рождения: " + safeBirthDate + "\n" +
+                "⏰ Последняя активность: " + safeLastOnline + "\n" +
+                "🟢 Онлайн: " + onlineStatus + "\n" +
+                "🔒 Заблокирован: " + blockedStatus + "\n" +
+                "📝 О себе: " + safeAbout;
     }
+
 
     /**
      * Экранирование HTML для Telegram
+     * Заменяет специальные HTML символы на их entity-коды
      */
     private String escapeHtml(String text) {
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-    }
-
-    /**
-     * Экранирование символа % для String.format()
-     * CRITICAL: без этого метода будет Exception если пользовательские данные содержат %
-     */
-    private String escapeForFormat(String text) {
-        if (text == null) {
+        if (text == null || text.isEmpty()) {
             return "";
         }
-        return text.replace("%", "%%");
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }

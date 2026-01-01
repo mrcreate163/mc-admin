@@ -4,6 +4,7 @@ package com.socialnetwork.adminbot.domain;
  * Перечисление возможных состояний диалога с ботом
  */
 public enum BotState {
+
     /**
      * Начальное состояние - пользователь не в диалоге
      */
@@ -19,10 +20,12 @@ public enum BotState {
      */
     SHOWING_SEARCH_RESULTS,
 
+    // ========== Invite-based Admin Management (v2.2) ==========
+
     /**
-     * Ожидание Telegram ID для добавления нового админа
+     * Ожидание ввода username для создания приглашения
      */
-    AWAITING_ADMIN_TELEGRAM_ID,
+    AWAITING_ADMIN_USERNAME,
 
     /**
      * Ожидание выбора роли для нового админа
@@ -30,9 +33,31 @@ public enum BotState {
     AWAITING_ADMIN_ROLE,
 
     /**
-     * Подтверждение создания нового админа
+     * Подтверждение создания приглашения
      */
+    CONFIRMING_ADMIN_INVITE_CREATION,
+
+    /**
+     * Подтверждение активации приглашения (со стороны кандидата)
+     */
+    CONFIRMING_INVITE_ACCEPTANCE,
+
+    // ========== Legacy (deprecated, for backward compatibility) ==========
+
+    /**
+     * @deprecated Используется старый подход (добавление по Telegram ID)
+     * Оставлен для обратной совместимости
+     */
+    @Deprecated
+    AWAITING_ADMIN_TELEGRAM_ID,
+
+    /**
+     * @deprecated Объединён с CONFIRMING_ADMIN_INVITE_CREATION
+     */
+    @Deprecated
     CONFIRMING_ADMIN_CREATION,
+
+    // ========== Moderation ==========
 
     /**
      * Ожидание причины бана пользователя

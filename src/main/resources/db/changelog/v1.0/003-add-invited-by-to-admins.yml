@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-invited-by-to-admins
+      author: your-name
+      changes:
+        - addColumn:
+            tableName: admins
+            columns:
+              - column:
+                  name: invited_by
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+                  remarks: "Telegram ID SUPER_ADMIN, который пригласил этого админа. NULL для SUPER_ADMIN (whitelist)"
+
+        - addColumn:
+            tableName: admins
+            columns:
+              - column:
+                  name: username
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
+                  remarks: "Telegram username (формат: @username)"
+
+        - addUniqueConstraint:
+            tableName: admins
+            columnNames: username
+            constraintName: uk_admins_username
+            validate: true
+
+      rollback:
+        - dropUniqueConstraint:
+            tableName: admins
+            constraintName: uk_admins_username
+
+        - dropColumn:
+            tableName: admins
+            columnName: invited_by
+
+        - dropColumn:
+            tableName: admins
+            columnName: username

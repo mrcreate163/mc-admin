@@ -24,7 +24,10 @@ public class Admin {
     @Column(name = "telegram_user_id")
     private Long telegramUserId;
 
-    @Column(name = "username")
+    /**
+     * Telegram username (Формат: @username)
+     */
+    @Column(name = "username", unique = true)
     private String username;
 
     @Column(name = "first_name")
@@ -37,6 +40,13 @@ public class Admin {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    /**
+     * Telegram ID SUPER_ADMIN, который пригласил данного админа,
+     * NULL для SUPER_ADMIN(добавление через whitelist)
+     */
+    @Column(name = "invited_by")
+    private Long invitedBy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

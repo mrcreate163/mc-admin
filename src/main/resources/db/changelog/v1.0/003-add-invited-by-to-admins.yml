@@ -3,6 +3,7 @@ databaseChangeLog:
       id: 003-add-invited-by-to-admins
       author: your-name
       changes:
+        # Добавляем ТОЛЬКО invited_by, так как username уже существует
         - addColumn:
             tableName: admins
             columns:
@@ -13,16 +14,7 @@ databaseChangeLog:
                     nullable: true
                   remarks: "Telegram ID SUPER_ADMIN, который пригласил этого админа. NULL для SUPER_ADMIN (whitelist)"
 
-        - addColumn:
-            tableName: admins
-            columns:
-              - column:
-                  name: username
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: true
-                  remarks: "Telegram username (формат: @username)"
-
+        # Добавляем UNIQUE constraint для username (если его ещё нет)
         - addUniqueConstraint:
             tableName: admins
             columnNames: username
@@ -37,7 +29,3 @@ databaseChangeLog:
         - dropColumn:
             tableName: admins
             columnName: invited_by
-
-        - dropColumn:
-            tableName: admins
-            columnName: username

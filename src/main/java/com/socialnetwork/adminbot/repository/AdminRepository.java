@@ -30,7 +30,7 @@ public interface AdminRepository extends JpaRepository<Admin, UUID> {
      * @param username
      * @return true || false
      */
-    boolean existByUsername(String username);
+    boolean existsByUsername(String username);
 
     /**
      * Найти админа по username (case-insensitive)

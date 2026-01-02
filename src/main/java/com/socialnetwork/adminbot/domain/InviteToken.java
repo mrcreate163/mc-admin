@@ -1,6 +1,7 @@
 package com.socialnetwork.adminbot.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.socialnetwork.adminbot.entity.AdminRole;
 import lombok.AllArgsConstructor;
@@ -56,6 +57,7 @@ public class InviteToken {
     /**
      * Проверить, истёк ли токен
      */
+    @JsonIgnore
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
@@ -63,6 +65,7 @@ public class InviteToken {
     /**
      * Получить оставшееся время действия в часах
      */
+    @JsonIgnore
     public long getHoursUntilExpiration() {
         if (isExpired()) {
             return 0;

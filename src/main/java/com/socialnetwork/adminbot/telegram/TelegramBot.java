@@ -94,7 +94,19 @@ public class TelegramBot extends TelegramLongPollingBot {
         Long userId = message.getFrom().getId();
         String text = message.getText();
 
-        // Check if user is admin
+        // ⭐ КРИТИЧНО: Проверяем deep link ПЕРЕД авторизацией
+        if (text != null && text.startsWith("/start invite_")) {
+            log.info("Deep link detected for user: {}, bypassing authorization check", userId);
+            try {
+                SendMessage response = startCommandHandler.handle(message);
+                execute(response);
+            } catch (TelegramApiException e) {
+                log.error("Error sending message: {}", e.getMessage(), e);
+            }
+            return; // ⬅️ Выходим ДО проверки авторизации
+        }
+
+        // Проверка авторизации для всех остальных команд
         if (!isAuthorized(userId)) {
             sendUnauthorizedMessage(message.getChatId());
             return;

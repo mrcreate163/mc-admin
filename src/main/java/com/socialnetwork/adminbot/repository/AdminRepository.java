@@ -51,4 +51,5 @@ public interface AdminRepository extends JpaRepository<Admin, UUID> {
      * @return List<Admin>
      */
     List<Admin> findByInvitedBy(Long invitedBy);
+
 }

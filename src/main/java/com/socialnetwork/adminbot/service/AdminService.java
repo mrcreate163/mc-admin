@@ -31,6 +31,8 @@ public class AdminService {
         return adminRepository.existsByTelegramUserId(telegramUserId);
     }
 
+
+
     /**
      * Проверить, имеет ли администратор определенную роль
      */

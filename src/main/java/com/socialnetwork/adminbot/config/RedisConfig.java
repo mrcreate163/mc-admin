@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.socialnetwork.adminbot.domain.ConversationState;
+import com.socialnetwork.adminbot.dto.PendingInvitation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -85,9 +86,8 @@ public class RedisConfig {
     }
 
     /**
-     * RedisTemplate для работы с токенами приглашений
-     * Ключ: String (invite:token:{token} или invite:username:{username})
-     * Значение: String (JSON)
+     * RedisTemplate для работы со строковыми значениями
+     * Общий шаблон для строковых ключей и значений
      */
     @Bean
     public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -99,6 +99,34 @@ public class RedisConfig {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new StringRedisSerializer());
         template.setHashValueSerializer(new StringRedisSerializer());
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    /**
+     * RedisTemplate для работы с pending приглашениями
+     * Ключ: String (telegram:invite:{token})
+     * Значение: PendingInvitation (JSON)
+     */
+    @Bean
+    public RedisTemplate<String, PendingInvitation> pendingInvitationRedisTemplate(
+            RedisConnectionFactory connectionFactory,
+            ObjectMapper redisObjectMapper) {
+
+        RedisTemplate<String, PendingInvitation> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // Сериализация ключей как строки
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+
+        // Сериализация значений как JSON
+        Jackson2JsonRedisSerializer<PendingInvitation> jsonSerializer =
+                new Jackson2JsonRedisSerializer<>(redisObjectMapper, PendingInvitation.class);
+
+        template.setValueSerializer(jsonSerializer);
+        template.setHashValueSerializer(jsonSerializer);
 
         template.afterPropertiesSet();
         return template;

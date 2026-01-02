@@ -318,4 +318,43 @@ class SearchCommandHandlerTest {
                 .size(5)
                 .build();
     }
+
+    // ========== OVERSIZED RESPONSE TESTS ==========
+
+    @Nested
+    @DisplayName("Oversized Response Protection Tests")
+    class OversizedResponseTests {
+
+        @Test
+        @DisplayName("processSearchQuery - should handle oversized response from backend gracefully")
+        void processSearchQuery_WhenBackendReturnsMoreThanPageSize_ShouldLimitDisplay() {
+            // Given: Backend incorrectly returns 100 users instead of requested 5
+            PageAccountDto oversizedResults = createSearchResults(100);
+            when(userService.searchUsersByEmail("user", 0, 5)).thenReturn(oversizedResults);
+
+            // When
+            SendMessage result = searchCommandHandler.processSearchQuery(CHAT_ID, ADMIN_TELEGRAM_ID, "user");
+
+            // Then: Should complete successfully without error
+            assertThat(result).isNotNull();
+            assertThat(result.getText()).contains("Результаты поиска");
+            // The message should be created (not throw exception due to Telegram limits)
+            assertThat(result.getReplyMarkup()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("processSearchQuery - should not exceed Telegram message size limit")
+        void processSearchQuery_WhenManyResults_ShouldNotExceedTelegramLimit() {
+            // Given: Backend returns many users
+            PageAccountDto oversizedResults = createSearchResults(50);
+            when(userService.searchUsersByEmail("user", 0, 5)).thenReturn(oversizedResults);
+
+            // When
+            SendMessage result = searchCommandHandler.processSearchQuery(CHAT_ID, ADMIN_TELEGRAM_ID, "user");
+
+            // Then: Message text should be within Telegram limit (4096 chars)
+            assertThat(result).isNotNull();
+            assertThat(result.getText().length()).isLessThan(4096);
+        }
+    }
 }

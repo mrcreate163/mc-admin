@@ -274,6 +274,11 @@ public class KeyboardBuilder {
     }
 
     /**
+     * Максимальное количество пользователей для отображения в клавиатуре
+     */
+    private static final int MAX_USERS_PER_PAGE = 5;
+    
+    /**
      * Клавиатура для результатов поиска с действиями и пагинацией
      *
      * Структура:
@@ -282,7 +287,7 @@ public class KeyboardBuilder {
      * [ ◀️ Назад ] [ Страница X/Y ] [ Вперёд ▶️ ]
      * [ 🔍 Новый поиск ] [ ❌ Отмена ]
      *
-     * @param users       список пользователей на текущей странице
+     * @param users       список пользователей на текущей странице (ограничен до MAX_USERS_PER_PAGE)
      * @param currentPage текущая страница (0-based)
      * @param totalPages  общее количество страниц
      * @return готовая inline клавиатура
@@ -294,10 +299,13 @@ public class KeyboardBuilder {
     ) {
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
+        // Ограничиваем количество пользователей для защиты от превышения лимитов Telegram
+        int usersToProcess = Math.min(users.size(), MAX_USERS_PER_PAGE);
+        
         // Кнопки действий для каждого пользователя
-        for (int i = 0; i < users.size(); i++) {
+        for (int i = 0; i < usersToProcess; i++) {
             AccountDto user = users.get(i);
-            int userNumber = currentPage * 5 + i + 1; // 5 = PAGE_SIZE
+            int userNumber = currentPage * MAX_USERS_PER_PAGE + i + 1;
 
             List<InlineKeyboardButton> row = new ArrayList<>();
 

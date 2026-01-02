@@ -1,9 +1,6 @@
 package com.socialnetwork.adminbot.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.socialnetwork.adminbot.domain.InviteToken;
+import com.socialnetwork.adminbot.dto.PendingInvitation;
 import com.socialnetwork.adminbot.entity.AdminRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +15,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -28,240 +26,182 @@ import static org.mockito.Mockito.*;
 class InviteServiceTest {
 
     @Mock
-    private RedisTemplate<String, String> redisTemplate;
+    private RedisTemplate<String, PendingInvitation> pendingInvitationRedisTemplate;
 
     @Mock
-    private ValueOperations<String, String> valueOperations;
+    private ValueOperations<String, PendingInvitation> valueOperations;
 
-    private ObjectMapper objectMapper;
     private InviteService inviteService;
 
-    private InviteToken testInvite;
-    private static final String TEST_TOKEN = "test-invite-token-12345";
-    private static final String TEST_USERNAME = "@testuser";
-    private static final Long CREATED_BY = 123456789L;
+    private PendingInvitation testInvitation;
+    private static final String TEST_TOKEN = "1234567890abcdef";
+    private static final Long INVITED_BY = 123456789L;
+    private static final String TEST_NOTE = "Test note";
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        
-        inviteService = new InviteService(redisTemplate, objectMapper);
+        inviteService = new InviteService(pendingInvitationRedisTemplate);
 
-        testInvite = InviteToken.builder()
-                .token(TEST_TOKEN)
-                .targetUsername(TEST_USERNAME)
+        testInvitation = PendingInvitation.builder()
+                .inviteToken(TEST_TOKEN)
+                .invitedBy(INVITED_BY)
                 .role(AdminRole.ADMIN)
-                .createdBy(CREATED_BY)
                 .createdAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .note(TEST_NOTE)
                 .build();
     }
 
     @Nested
-    @DisplayName("saveInvite Tests")
-    class SaveInviteTests {
+    @DisplayName("createInvitation Tests")
+    class CreateInvitationTests {
 
         @Test
-        @DisplayName("should save invite token with TTL")
-        void saveInvite_ShouldSaveTokenWithTtl() throws JsonProcessingException {
+        @DisplayName("should create invitation with role only")
+        void createInvitation_WithRoleOnly_ShouldSaveAndReturnToken() {
             // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
 
             // When
-            inviteService.saveInvite(testInvite);
+            String token = inviteService.createInvitation(INVITED_BY, AdminRole.ADMIN);
 
             // Then
-            String expectedTokenKey = "invite:token:" + TEST_TOKEN;
-            String expectedUsernameKey = "invite:username:" + TEST_USERNAME.toLowerCase();
-            
-            verify(valueOperations).set(eq(expectedTokenKey), anyString(), eq(Duration.ofHours(24)));
-            verify(valueOperations).set(eq(expectedUsernameKey), eq(TEST_TOKEN), eq(Duration.ofHours(24)));
+            assertThat(token).isNotNull();
+            assertThat(token).hasSize(16);
+
+            ArgumentCaptor<PendingInvitation> invitationCaptor = ArgumentCaptor.forClass(PendingInvitation.class);
+            verify(valueOperations).set(eq("telegram:invite:" + token), invitationCaptor.capture(), eq(Duration.ofHours(24)));
+
+            PendingInvitation savedInvitation = invitationCaptor.getValue();
+            assertThat(savedInvitation.getInviteToken()).isEqualTo(token);
+            assertThat(savedInvitation.getInvitedBy()).isEqualTo(INVITED_BY);
+            assertThat(savedInvitation.getRole()).isEqualTo(AdminRole.ADMIN);
+            assertThat(savedInvitation.getNote()).isNull();
         }
 
         @Test
-        @DisplayName("should serialize invite as JSON")
-        void saveInvite_ShouldSerializeAsJson() throws JsonProcessingException {
+        @DisplayName("should create invitation with note")
+        void createInvitation_WithNote_ShouldSaveWithNote() {
             // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
 
             // When
-            inviteService.saveInvite(testInvite);
+            String token = inviteService.createInvitation(INVITED_BY, AdminRole.MODERATOR, TEST_NOTE);
 
             // Then
-            String expectedTokenKey = "invite:token:" + TEST_TOKEN;
-            verify(valueOperations).set(eq(expectedTokenKey), jsonCaptor.capture(), any(Duration.class));
-            
-            String json = jsonCaptor.getValue();
-            assertThat(json).contains(TEST_TOKEN);
-            assertThat(json).contains(TEST_USERNAME);
-            assertThat(json).contains("ADMIN");
-        }
-    }
+            assertThat(token).isNotNull();
+            assertThat(token).hasSize(16);
 
-    @Nested
-    @DisplayName("getInviteByToken Tests")
-    class GetInviteByTokenTests {
+            ArgumentCaptor<PendingInvitation> invitationCaptor = ArgumentCaptor.forClass(PendingInvitation.class);
+            verify(valueOperations).set(eq("telegram:invite:" + token), invitationCaptor.capture(), eq(Duration.ofHours(24)));
 
-        @Test
-        @DisplayName("should return invite when token exists and not expired")
-        void getInviteByToken_WhenExists_ShouldReturnInvite() throws JsonProcessingException {
-            // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            String json = objectMapper.writeValueAsString(testInvite);
-            when(valueOperations.get("invite:token:" + TEST_TOKEN)).thenReturn(json);
-
-            // When
-            InviteToken result = inviteService.getInviteByToken(TEST_TOKEN);
-
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getToken()).isEqualTo(TEST_TOKEN);
-            assertThat(result.getTargetUsername()).isEqualTo(TEST_USERNAME);
-            assertThat(result.getRole()).isEqualTo(AdminRole.ADMIN);
-        }
-
-        @Test
-        @DisplayName("should return null when token not found")
-        void getInviteByToken_WhenNotFound_ShouldReturnNull() {
-            // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            when(valueOperations.get("invite:token:" + TEST_TOKEN)).thenReturn(null);
-
-            // When
-            InviteToken result = inviteService.getInviteByToken(TEST_TOKEN);
-
-            // Then
-            assertThat(result).isNull();
-        }
-
-        @Test
-        @DisplayName("should return null and delete when token expired")
-        void getInviteByToken_WhenExpired_ShouldReturnNullAndDelete() throws JsonProcessingException {
-            // Given
-            InviteToken expiredInvite = InviteToken.builder()
-                    .token(TEST_TOKEN)
-                    .targetUsername(TEST_USERNAME)
-                    .role(AdminRole.ADMIN)
-                    .createdBy(CREATED_BY)
-                    .createdAt(LocalDateTime.now().minusDays(2))
-                    .expiresAt(LocalDateTime.now().minusDays(1))  // Expired
-                    .build();
-
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            String json = objectMapper.writeValueAsString(expiredInvite);
-            when(valueOperations.get("invite:token:" + TEST_TOKEN)).thenReturn(json);
-
-            // When
-            InviteToken result = inviteService.getInviteByToken(TEST_TOKEN);
-
-            // Then
-            assertThat(result).isNull();
-            verify(redisTemplate).delete("invite:token:" + TEST_TOKEN);
-            verify(redisTemplate).delete("invite:username:" + TEST_USERNAME.toLowerCase());
+            PendingInvitation savedInvitation = invitationCaptor.getValue();
+            assertThat(savedInvitation.getRole()).isEqualTo(AdminRole.MODERATOR);
+            assertThat(savedInvitation.getNote()).isEqualTo(TEST_NOTE);
         }
     }
 
     @Nested
-    @DisplayName("hasActivePendingInvite Tests")
-    class HasActivePendingInviteTests {
+    @DisplayName("getInvitation Tests")
+    class GetInvitationTests {
 
         @Test
-        @DisplayName("should return true when pending invite exists")
-        void hasActivePendingInvite_WhenExists_ShouldReturnTrue() {
+        @DisplayName("should return invitation when token exists")
+        void getInvitation_WhenExists_ShouldReturnInvitation() {
             // Given
-            when(redisTemplate.hasKey("invite:username:" + TEST_USERNAME.toLowerCase())).thenReturn(true);
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(testInvitation);
 
             // When
-            boolean result = inviteService.hasActivePendingInvite(TEST_USERNAME);
+            Optional<PendingInvitation> result = inviteService.getInvitation(TEST_TOKEN);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getInviteToken()).isEqualTo(TEST_TOKEN);
+            assertThat(result.get().getInvitedBy()).isEqualTo(INVITED_BY);
+            assertThat(result.get().getRole()).isEqualTo(AdminRole.ADMIN);
+        }
+
+        @Test
+        @DisplayName("should return empty when token not found")
+        void getInvitation_WhenNotFound_ShouldReturnEmpty() {
+            // Given
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(null);
+
+            // When
+            Optional<PendingInvitation> result = inviteService.getInvitation(TEST_TOKEN);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("consumeInvitation Tests")
+    class ConsumeInvitationTests {
+
+        @Test
+        @DisplayName("should consume and delete invitation when exists")
+        void consumeInvitation_WhenExists_ShouldReturnAndDelete() {
+            // Given
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(testInvitation);
+
+            // When
+            Optional<PendingInvitation> result = inviteService.consumeInvitation(TEST_TOKEN);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getInviteToken()).isEqualTo(TEST_TOKEN);
+            verify(pendingInvitationRedisTemplate).delete("telegram:invite:" + TEST_TOKEN);
+        }
+
+        @Test
+        @DisplayName("should return empty when invitation not found")
+        void consumeInvitation_WhenNotFound_ShouldReturnEmpty() {
+            // Given
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(null);
+
+            // When
+            Optional<PendingInvitation> result = inviteService.consumeInvitation(TEST_TOKEN);
+
+            // Then
+            assertThat(result).isEmpty();
+            verify(pendingInvitationRedisTemplate, never()).delete(anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("isValidInvitation Tests")
+    class IsValidInvitationTests {
+
+        @Test
+        @DisplayName("should return true when invitation exists")
+        void isValidInvitation_WhenExists_ShouldReturnTrue() {
+            // Given
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(testInvitation);
+
+            // When
+            boolean result = inviteService.isValidInvitation(TEST_TOKEN);
 
             // Then
             assertThat(result).isTrue();
         }
 
         @Test
-        @DisplayName("should return false when no pending invite")
-        void hasActivePendingInvite_WhenNotExists_ShouldReturnFalse() {
+        @DisplayName("should return false when invitation not found")
+        void isValidInvitation_WhenNotFound_ShouldReturnFalse() {
             // Given
-            when(redisTemplate.hasKey("invite:username:" + TEST_USERNAME.toLowerCase())).thenReturn(false);
+            when(pendingInvitationRedisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("telegram:invite:" + TEST_TOKEN)).thenReturn(null);
 
             // When
-            boolean result = inviteService.hasActivePendingInvite(TEST_USERNAME);
+            boolean result = inviteService.isValidInvitation(TEST_TOKEN);
 
             // Then
             assertThat(result).isFalse();
-        }
-    }
-
-    @Nested
-    @DisplayName("deleteInvite Tests")
-    class DeleteInviteTests {
-
-        @Test
-        @DisplayName("should delete both token and username keys")
-        void deleteInvite_ShouldDeleteBothKeys() throws JsonProcessingException {
-            // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            String json = objectMapper.writeValueAsString(testInvite);
-            when(valueOperations.get("invite:token:" + TEST_TOKEN)).thenReturn(json);
-
-            // When
-            inviteService.deleteInvite(TEST_TOKEN);
-
-            // Then
-            verify(redisTemplate).delete("invite:token:" + TEST_TOKEN);
-            verify(redisTemplate).delete("invite:username:" + TEST_USERNAME.toLowerCase());
-        }
-    }
-
-    @Nested
-    @DisplayName("tryLockInvite Tests")
-    class TryLockInviteTests {
-
-        @Test
-        @DisplayName("should return true when lock acquired")
-        void tryLockInvite_WhenLockAcquired_ShouldReturnTrue() {
-            // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            when(valueOperations.setIfAbsent("invite:lock:" + TEST_TOKEN, "locked", Duration.ofMinutes(5)))
-                    .thenReturn(true);
-
-            // When
-            boolean result = inviteService.tryLockInvite(TEST_TOKEN);
-
-            // Then
-            assertThat(result).isTrue();
-        }
-
-        @Test
-        @DisplayName("should return false when lock already held")
-        void tryLockInvite_WhenLockAlreadyHeld_ShouldReturnFalse() {
-            // Given
-            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            when(valueOperations.setIfAbsent("invite:lock:" + TEST_TOKEN, "locked", Duration.ofMinutes(5)))
-                    .thenReturn(false);
-
-            // When
-            boolean result = inviteService.tryLockInvite(TEST_TOKEN);
-
-            // Then
-            assertThat(result).isFalse();
-        }
-    }
-
-    @Nested
-    @DisplayName("unlockInvite Tests")
-    class UnlockInviteTests {
-
-        @Test
-        @DisplayName("should delete lock key")
-        void unlockInvite_ShouldDeleteLockKey() {
-            // When
-            inviteService.unlockInvite(TEST_TOKEN);
-
-            // Then
-            verify(redisTemplate).delete("invite:lock:" + TEST_TOKEN);
         }
     }
 }

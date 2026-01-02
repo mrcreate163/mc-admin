@@ -1,5 +1,6 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+import com.socialnetwork.adminbot.constant.PaginationConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
@@ -25,7 +26,7 @@ import java.util.List;
 @Component
 public class SearchCommandHandler extends StatefulCommandHandler {
 
-    private static final int PAGE_SIZE = 5; // Оптимально для мобильного интерфейса
+    private static final int PAGE_SIZE = PaginationConstants.SEARCH_PAGE_SIZE;
     private static final int MIN_QUERY_LENGTH = 3;
     private static final String EMAIL_PATTERN = "^[a-zA-Z0-9@._-]+$";
 
@@ -210,9 +211,17 @@ public class SearchCommandHandler extends StatefulCommandHandler {
                 results.getTotalPages()
         ));
 
-        // Карточки пользователей
+        // Карточки пользователей - ограничиваем до PAGE_SIZE для защиты от некорректного ответа backend
         List<AccountDto> users = results.getContent();
-        for (int i = 0; i < users.size(); i++) {
+        int usersToDisplay = Math.min(users.size(), PAGE_SIZE);
+        
+        // Логируем предупреждение если backend вернул больше элементов чем запрошено
+        if (users.size() > PAGE_SIZE) {
+            log.warn("Backend returned {} users instead of requested {}. Limiting display to {}.",
+                    users.size(), PAGE_SIZE, PAGE_SIZE);
+        }
+        
+        for (int i = 0; i < usersToDisplay; i++) {
             AccountDto user = users.get(i);
 
             text.append(String.format("<b>%d.</b> ", currentPage * PAGE_SIZE + i + 1));
@@ -225,7 +234,7 @@ public class SearchCommandHandler extends StatefulCommandHandler {
             ));
 
             // Разделитель между пользователями
-            if (i < users.size() - 1) {
+            if (i < usersToDisplay - 1) {
                 text.append("\n\n");
             }
         }
@@ -233,8 +242,12 @@ public class SearchCommandHandler extends StatefulCommandHandler {
         SendMessage message = createMessage(chatId, text.toString());
 
         // Добавляем клавиатуру с действиями и пагинацией
+        // Передаём только ограниченный список пользователей (защита от пустого списка)
+        List<AccountDto> usersForKeyboard = usersToDisplay > 0 
+                ? users.subList(0, usersToDisplay) 
+                : List.of();
         message.setReplyMarkup(KeyboardBuilder.buildSearchResultsKeyboard(
-                users,
+                usersForKeyboard,
                 currentPage,
                 results.getTotalPages()
         ));

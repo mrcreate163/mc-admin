@@ -86,9 +86,8 @@ public class RedisConfig {
     }
 
     /**
-     * RedisTemplate для работы с токенами приглашений
-     * Ключ: String (invite:token:{token} или invite:username:{username})
-     * Значение: String (JSON)
+     * RedisTemplate для работы со строковыми значениями
+     * Общий шаблон для строковых ключей и значений
      */
     @Bean
     public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {

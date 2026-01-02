@@ -116,9 +116,10 @@ class InviteServiceTest {
 
             // Then
             assertThat(result).isPresent();
-            assertThat(result.get().getInviteToken()).isEqualTo(TEST_TOKEN);
-            assertThat(result.get().getInvitedBy()).isEqualTo(INVITED_BY);
-            assertThat(result.get().getRole()).isEqualTo(AdminRole.ADMIN);
+            PendingInvitation invitation = result.get();
+            assertThat(invitation.getInviteToken()).isEqualTo(TEST_TOKEN);
+            assertThat(invitation.getInvitedBy()).isEqualTo(INVITED_BY);
+            assertThat(invitation.getRole()).isEqualTo(AdminRole.ADMIN);
         }
 
         @Test
@@ -152,7 +153,8 @@ class InviteServiceTest {
 
             // Then
             assertThat(result).isPresent();
-            assertThat(result.get().getInviteToken()).isEqualTo(TEST_TOKEN);
+            PendingInvitation invitation = result.get();
+            assertThat(invitation.getInviteToken()).isEqualTo(TEST_TOKEN);
             verify(pendingInvitationRedisTemplate).delete("telegram:invite:" + TEST_TOKEN);
         }
 

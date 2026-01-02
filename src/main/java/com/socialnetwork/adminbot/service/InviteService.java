@@ -223,10 +223,10 @@ public class InviteService {
             SECURE_RANDOM.nextBytes(randomBytes);
 
             // Используем Base64 URL-safe encoding (без +, /, =)
+            // 32 байта → 43 символа в Base64 (без padding)
             token = Base64.getUrlEncoder()
                     .withoutPadding()
-                    .encodeToString(randomBytes)
-                    .substring(0, Math.min(48, INVITE_TOKEN_LENGTH * 2)); // Ограничиваем длину
+                    .encodeToString(randomBytes);
 
             attempts++;
 
@@ -236,6 +236,7 @@ public class InviteService {
 
         } while (invitationRepository.existsByInviteToken(token));
 
+        log.debug("Generated unique invite token: {} (length: {})", token, token.length());
         return token;
     }
 }

@@ -1,0 +1,127 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-admin-invitations-table
+      author: admin-bot-service
+      changes:
+        # Создание основной таблицы приглашений
+        - createTable:
+            tableName: admin_invitations
+            columns:
+              # Первичный ключ (UUID)
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              # Уникальный токен приглашения (для deep link)
+              - column:
+                  name: invite_token
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+
+              # Роль, которая будет назначена новому администратору
+              - column:
+                  name: role
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+
+              # Telegram ID SUPER_ADMIN, создавшего приглашение
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              # Срок действия приглашения
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              # Флаг использования приглашения
+              - column:
+                  name: is_used
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+              # Telegram ID активированного администратора (nullable до активации)
+              - column:
+                  name: activated_admin_id
+                  type: BIGINT
+
+              # Временная метка создания
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              # Временная метка использования (nullable до использования)
+              - column:
+                  name: used_at
+                  type: TIMESTAMP
+
+        # Индекс для быстрого поиска по токену (основной use-case)
+        - createIndex:
+            tableName: admin_invitations
+            indexName: idx_admin_invitations_token
+            unique: true
+            columns:
+              - column:
+                  name: invite_token
+
+        # Индекс для поиска приглашений, созданных конкретным SUPER_ADMIN
+        - createIndex:
+            tableName: admin_invitations
+            indexName: idx_admin_invitations_created_by
+            columns:
+              - column:
+                  name: created_by
+
+        # Индекс для фильтрации активных (неиспользованных) приглашений
+        - createIndex:
+            tableName: admin_invitations
+            indexName: idx_admin_invitations_is_used
+            columns:
+              - column:
+                  name: is_used
+
+        # Композитный индекс для поиска валидных приглашений
+        # (не использованы + не истекли)
+        - createIndex:
+            tableName: admin_invitations
+            indexName: idx_admin_invitations_valid
+            columns:
+              - column:
+                  name: is_used
+              - column:
+                  name: expires_at
+
+        # Foreign Key: связь с таблицей admins (кто создал)
+        - addForeignKeyConstraint:
+            baseTableName: admin_invitations
+            baseColumnNames: created_by
+            constraintName: fk_admin_invitations_created_by
+            referencedTableName: admins
+            referencedColumnNames: telegram_user_id
+            onDelete: CASCADE
+
+        # Foreign Key: связь с таблицей admins (кто активировал)
+        # nullable = true, поэтому validate = false
+        - addForeignKeyConstraint:
+            baseTableName: admin_invitations
+            baseColumnNames: activated_admin_id
+            constraintName: fk_admin_invitations_activated_admin
+            referencedTableName: admins
+            referencedColumnNames: telegram_user_id
+            onDelete: SET NULL
+            validate: false

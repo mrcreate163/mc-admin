@@ -1,10 +1,12 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
 import com.socialnetwork.adminbot.dto.AccountDto;
 import com.socialnetwork.adminbot.dto.StatisticsDto;
+import com.socialnetwork.adminbot.entity.AdminRole;
 import com.socialnetwork.adminbot.service.*;
 import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
@@ -32,6 +34,7 @@ public class CallbackQueryHandler {
     private final StateTransitionService stateTransitionService;
     private final BanCommandHandler banCommandHandler;
     private final SearchCommandHandler searchCommandHandler;
+    private final AddAdminCommandHandler addAdminCommandHandler; // ⬅️ ДОБАВЛЕНО
 
     public EditMessageText handle(CallbackQuery callbackQuery, Long adminId) {
         String data = callbackQuery.getData();
@@ -68,6 +71,8 @@ public class CallbackQueryHandler {
                 return handleSearchNew(chatId, messageId, adminId);
             } else if (data.equals("search_cancel")) {
                 return handleSearchCancel(chatId, messageId, adminId);
+            } else if (data.startsWith("add_admin:")) { // ⬅️ ДОБАВЛЕНО
+                return handleAddAdminCallback(data, chatId, messageId, adminId);
             } else if (data.equals("noop")) {
                 return null; // Игнорируем нажатие на неактивные кнопки
             } else {
@@ -546,6 +551,76 @@ public class CallbackQueryHandler {
         message.setParseMode("HTML");
 
         return message;
+    }
+
+    /**
+     * Обработка callback'ов для команды /addadmin
+     *
+     * Callback data формат: "add_admin:action:param"
+     * Примеры:
+     * - "add_admin:role:MODERATOR" - выбор роли MODERATOR
+     * - "add_admin:role:ADMIN" - выбор роли ADMIN
+     * - "add_admin:cancel" - отмена создания приглашения
+     */
+    private EditMessageText handleAddAdminCallback(
+            String data,
+            Long chatId,
+            Integer messageId,
+            Long adminId
+    ) {
+        // Парсинг callback data: "add_admin:action:param"
+        String[] parts = data.split(":");
+
+        if (parts.length < 2) {
+            log.warn("Invalid add_admin callback format: {}", data);
+            return createErrorMessage(chatId, messageId,
+                    BotMessage.ERROR_INVALID_FORMAT.raw());
+        }
+
+        String action = parts[1];
+
+        // Отмена
+        if ("cancel".equals(action)) {
+            String cancelMessage = addAdminCommandHandler.cancelAddAdmin(adminId);
+
+            EditMessageText message = new EditMessageText();
+            message.setChatId(chatId.toString());
+            message.setMessageId(messageId);
+            message.setText(cancelMessage);
+            message.setParseMode("HTML");
+
+            return message;
+        }
+
+        // Выбор роли
+        if ("role".equals(action) && parts.length == 3) {
+            String roleName = parts[2];
+
+            try {
+                AdminRole selectedRole = AdminRole.valueOf(roleName);
+                String responseText = addAdminCommandHandler.handleRoleSelection(adminId, selectedRole);
+
+                // Создаем сообщение со ссылкой (без клавиатуры, т.к. ссылка одноразовая)
+                EditMessageText message = new EditMessageText();
+                message.setChatId(chatId.toString());
+                message.setMessageId(messageId);
+                message.setText(responseText);
+                message.setParseMode("HTML");
+                message.setReplyMarkup(null); // Убираем клавиатуру после генерации ссылки
+
+                return message;
+
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid role name: {}", roleName, e);
+                return createErrorMessage(chatId, messageId,
+                        BotMessage.ERROR_INVALID_FORMAT.raw());
+            }
+        }
+
+        // Неизвестное действие
+        log.warn("Unknown add_admin action: {}", action);
+        return createErrorMessage(chatId, messageId,
+                BotMessage.ERROR_UNKNOWN_ACTION.raw());
     }
 
     /**

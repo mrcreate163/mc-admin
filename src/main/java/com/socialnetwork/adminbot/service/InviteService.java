@@ -1,165 +1,129 @@
 package com.socialnetwork.adminbot.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.socialnetwork.adminbot.domain.InviteToken;
+
+import com.socialnetwork.adminbot.dto.PendingInvitation;
+import com.socialnetwork.adminbot.entity.AdminRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Сервис для управления токенами-приглашениями в Redis
+ * Сервис для управления приглашениями новых администраторов
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class InviteService {
+    private final RedisTemplate<String, PendingInvitation> pendingInvitationRedisTemplate;
 
-    private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
-
-    private static final String INVITE_TOKEN_PREFIX = "invite:token:";
-    private static final String INVITE_USERNAME_PREFIX = "invite:username:";
+    private static final String INVITE_KEY_PREFIX = "telegram:invite:";
     private static final Duration INVITE_TTL = Duration.ofHours(24);
 
     /**
-     * Сохранить токен-приглашение в Redis
+     * Создать новое приглашение для роли
+     *
+     * @param invitedBy Telegram ID приглашающего SUPER_ADMIN
+     * @param role роль для нового админа
+     * @return токен приглашения
      */
-    public void saveInvite(InviteToken invite) {
-        try {
-            String tokenKey = INVITE_TOKEN_PREFIX + invite.getToken();
-            String usernameKey = INVITE_USERNAME_PREFIX + invite.getTargetUsername().toLowerCase();
-
-            String json = objectMapper.writeValueAsString(invite);
-
-            // Сохраняем токен с TTL 24 часа
-            redisTemplate.opsForValue().set(tokenKey, json, INVITE_TTL);
-
-            // Сохраняем маппинг username -> token (для проверки дубликатов)
-            redisTemplate.opsForValue().set(usernameKey, invite.getToken(), INVITE_TTL);
-
-            log.info("Invite saved: token={}, username={}, role={}, expiresAt={}",
-                    invite.getToken(), invite.getTargetUsername(), invite.getRole(), invite.getExpiresAt());
-
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize invite token", e);
-            throw new RuntimeException("Failed to save invite", e);
-        }
+    public String createInvitation(Long invitedBy, AdminRole role) {
+        return createInvitation(invitedBy, role, null);
     }
 
     /**
-     * Получить токен-приглашение по токену
+     * Создать новое приглашение с заметкой
+     *
+     * @param invitedBy Telegram ID приглашающего SUPER_ADMIN
+     * @param role роль для нового админа
+     * @param note дополнительная информация
+     * @return токен приглашения
      */
-    public InviteToken getInviteByToken(String token) {
-        try {
-            String key = INVITE_TOKEN_PREFIX + token;
-            String json = redisTemplate.opsForValue().get(key);
+    public String createInvitation(Long invitedBy, AdminRole role, String note) {
+        // Генерируем уникальный токен
+        String token = generateInviteToken();
 
-            if (json == null) {
-                log.debug("Invite token not found: {}", token);
-                return null;
-            }
+        PendingInvitation invitation = PendingInvitation.builder()
+                .inviteToken(token)
+                .invitedBy(invitedBy)
+                .role(role)
+                .createdAt(LocalDateTime.now())
+                .note(note)
+                .build();
 
-            InviteToken invite = objectMapper.readValue(json, InviteToken.class);
+        // Сохраняем в Redis с TTL 24 часа
+        String key = buildKey(token);
+        pendingInvitationRedisTemplate.opsForValue().set(key, invitation, INVITE_TTL);
 
-            // Проверяем истечение (дополнительная проверка, Redis TTL должен сам удалять)
-            if (invite.isExpired()) {
-                log.warn("Invite token expired: {}", token);
-                deleteInvite(token);
-                return null;
-            }
-
-            return invite;
-
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize invite token: {}", token, e);
-            throw new RuntimeException("Failed to read invite", e);
-        }
+        log.info("Created invitation: token={}, invitedBy={}, role={}",
+                token, invitedBy, role);
+        return token;
     }
 
     /**
-     * Проверить, есть ли активное приглашение для username
+     * Получить приглашение по токену
+     *
+     * @param token токен приглашения
+     * @return Optional с приглашением или empty если не найдено/истекло
      */
-    public boolean hasActivePendingInvite(String username) {
-        String key = INVITE_USERNAME_PREFIX + username.toLowerCase();
-        Boolean hasKey = redisTemplate.hasKey(key);
-        return Boolean.TRUE.equals(hasKey);
-    }
+    public Optional<PendingInvitation> getInvitation(String token) {
+        String key = buildKey(token);
+        PendingInvitation invitation = pendingInvitationRedisTemplate.opsForValue().get(key);
 
-    /**
-     * Удалить токен-приглашение
-     */
-    public void deleteInvite(String token) {
-        try {
-            String tokenKey = INVITE_TOKEN_PREFIX + token;
-            String json = redisTemplate.opsForValue().get(tokenKey);
-            
-            if (json != null) {
-                InviteToken invite = objectMapper.readValue(json, InviteToken.class);
-                String usernameKey = INVITE_USERNAME_PREFIX + invite.getTargetUsername().toLowerCase();
-                
-                redisTemplate.delete(tokenKey);
-                redisTemplate.delete(usernameKey);
-                
-                log.info("Invite deleted: token={}, username={}", token, invite.getTargetUsername());
-            } else {
-                // Token already deleted, just try to clean up
-                redisTemplate.delete(tokenKey);
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize invite token during delete: {}", token, e);
-            log.warn("Username mapping for token {} might remain orphaned", token);
-            // Still try to delete the token key
-            redisTemplate.delete(INVITE_TOKEN_PREFIX + token);
-        }
-    }
-
-    /**
-     * Получить все активные приглашения
-     */
-    public List<InviteToken> getAllActiveInvites() {
-        Set<String> keys = redisTemplate.keys(INVITE_TOKEN_PREFIX + "*");
-
-        if (keys == null || keys.isEmpty()) {
-            return Collections.emptyList();
+        if (invitation == null) {
+            log.debug("Invitation not found or expired: token={}", token);
+            return Optional.empty();
         }
 
-        return keys.stream()
-                .map(key -> {
-                    String json = redisTemplate.opsForValue().get(key);
-                    try {
-                        return objectMapper.readValue(json, InviteToken.class);
-                    } catch (JsonProcessingException e) {
-                        log.error("Failed to deserialize invite: key={}", key, e);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .filter(invite -> !invite.isExpired()) // дополнительная фильтрация
-                .collect(Collectors.toList());
+        log.debug("Retrieved invitation: token={}, role={}", token, invitation.getRole());
+        return Optional.of(invitation);
     }
 
     /**
-     * Попытка залочить токен для активации (защита от race condition)
+     * Использовать приглашение (удалить из Redis после активации)
+     *
+     * @param token токен приглашения
+     * @return Optional с приглашением или empty если не найдено
      */
-    public boolean tryLockInvite(String token) {
-        String lockKey = "invite:lock:" + token;
-        Boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(lockKey, "locked", Duration.ofMinutes(5));
-        return Boolean.TRUE.equals(locked);
+    public Optional<PendingInvitation> consumeInvitation(String token) {
+        Optional<PendingInvitation> invitation = getInvitation(token);
+
+        if (invitation.isPresent()) {
+            String key = buildKey(token);
+            pendingInvitationRedisTemplate.delete(key);
+            log.info("Invitation consumed: token={}", token);
+        }
+
+        return invitation;
     }
 
     /**
-     * Разлочить токен
+     * Проверить, валиден ли токен приглашения
+     *
+     * @param token токен приглашения
+     * @return true если приглашение существует и не истекло
      */
-    public void unlockInvite(String token) {
-        String lockKey = "invite:lock:" + token;
-        redisTemplate.delete(lockKey);
+    public boolean isValidInvitation(String token) {
+        return getInvitation(token).isPresent();
+    }
+
+    /**
+     * Генерировать уникальный токен приглашения
+     * Формат: 8 символов UUID (без дефисов)
+     */
+    private String generateInviteToken() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    }
+
+    /**
+     * Построить Redis ключ для токена
+     */
+    private String buildKey(String token) {
+        return INVITE_KEY_PREFIX + token;
     }
 }

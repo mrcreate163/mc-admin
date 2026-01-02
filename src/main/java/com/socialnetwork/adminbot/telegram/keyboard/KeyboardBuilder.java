@@ -14,6 +14,44 @@ import java.util.*;
 public class KeyboardBuilder {
 
     /**
+     * Клавиатура выбора роли для нового админа
+     * Структура:
+     * [ 🔵 MODERATOR ]
+     * [ 🟢 SENIOR_MODERATOR ]
+     * [ 🟠 ADMIN ]
+     * [ 🔴 SUPER_ADMIN ]
+     * [ ❌ Отмена ]
+     */
+    public static InlineKeyboardMarkup buildRoleSelectionKeyboard() {
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        // Каждая роль на отдельной кнопке
+        rows.add(List.of(
+                createButton("🔵 MODERATOR", "add_admin:role:MODERATOR")
+        ));
+
+        rows.add(List.of(
+                createButton("🟢 SENIOR_MODERATOR", "add_admin:role:SENIOR_MODERATOR")
+        ));
+
+        rows.add(List.of(
+                createButton("🟠 ADMIN", "add_admin:role:ADMIN")
+        ));
+
+        rows.add(List.of(
+                createButton("🔴 SUPER_ADMIN", "add_admin:role:SUPER_ADMIN")
+        ));
+
+        // Кнопка отмены
+        rows.add(List.of(
+                createButton("❌ Отмена", "add_admin:cancel")
+        ));
+
+        return createKeyboard(rows);
+    }
+
+
+    /**
      * Создаёт клавиатуру с действиями над пользователем.
      * <p>
      * Структура:

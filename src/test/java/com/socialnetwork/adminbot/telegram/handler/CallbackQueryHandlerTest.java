@@ -53,6 +53,8 @@ class CallbackQueryHandlerTest {
 
     private CallbackQueryHandler callbackQueryHandler;
 
+    private AddAdminCommandHandler addAdminCommandHandler;
+
     private CallbackQuery mockCallbackQuery;
     private Message mockMessage;
     private static final Long ADMIN_TELEGRAM_ID = 123456789L;
@@ -70,7 +72,8 @@ class CallbackQueryHandlerTest {
                 conversationStateService,
                 stateTransitionService,
                 banCommandHandler,
-                searchCommandHandler
+                searchCommandHandler,
+                addAdminCommandHandler
         );
 
         mockCallbackQuery = mock(CallbackQuery.class);

@@ -23,19 +23,17 @@ import java.util.List;
 @Slf4j
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
-
     private final TelegramBotConfig botConfig;
     private final AdminService adminService;
     private final ConversationStateService conversationStateService;
-
     private final StartCommandHandler startCommandHandler;
     private final UserCommandHandler userCommandHandler;
     private final StatsCommandHandler statsCommandHandler;
     private final BanCommandHandler banCommandHandler;
     private final SearchCommandHandler searchCommandHandler;
+    private final AddAdminCommandHandler addAdminCommandHandler;
     private final CallbackQueryHandler callbackQueryHandler;
     private final TextMessageHandler textMessageHandler;
-
     private final List<Long> adminWhitelist;
 
     public TelegramBot(
@@ -47,6 +45,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             StatsCommandHandler statsCommandHandler,
             BanCommandHandler banCommandHandler,
             SearchCommandHandler searchCommandHandler,
+            AddAdminCommandHandler addAdminCommandHandler,
             CallbackQueryHandler callbackQueryHandler,
             TextMessageHandler textMessageHandler,
             @Value("${admin.whitelist}") String adminWhitelistStr
@@ -59,11 +58,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.userCommandHandler = userCommandHandler;
         this.statsCommandHandler = statsCommandHandler;
         this.banCommandHandler = banCommandHandler;
-        this.callbackQueryHandler = callbackQueryHandler;
         this.searchCommandHandler = searchCommandHandler;
+        this.addAdminCommandHandler = addAdminCommandHandler;
+        this.callbackQueryHandler = callbackQueryHandler;
         this.textMessageHandler = textMessageHandler;
-
-        //Регистрация handlers по имени команды
 
         // Parse admin whitelist from configuration
         this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
@@ -103,7 +101,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         log.info("Processing message: {} from user: {}", text, userId);
-
         try {
             SendMessage response;
 
@@ -141,7 +138,6 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         // Проверяем, находится ли пользователь в активном диалоге
         BotState currentState = conversationStateService.getCurrentState(userId);
-
         if (currentState != BotState.IDLE) {
             // Пользователь в диалоге, но вводит новую команду
             return createMessage(message.getChatId(),
@@ -160,6 +156,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             return banCommandHandler.handleUnban(message, userId);
         } else if (text.startsWith("/search")) {
             return searchCommandHandler.handle(message, userId);
+        } else if (text.startsWith("/addadmin")) {
+            return addAdminCommandHandler.handle(message, userId);
         } else {
             return createMessage(message.getChatId(),
                     BotMessage.ERROR_UNKNOWN_COMMAND.raw());
@@ -183,7 +181,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         log.info("Processing callback: {} from user: {}", callbackQuery.getData(), userId);
-
         try {
             EditMessageText response = callbackQueryHandler.handle(callbackQuery, userId);
             execute(response);
@@ -209,7 +206,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 chatId.toString(),
                 BotMessage.ERROR_UNAUTHORIZED.raw()
         );
-
         try {
             execute(message);
         } catch (TelegramApiException e) {

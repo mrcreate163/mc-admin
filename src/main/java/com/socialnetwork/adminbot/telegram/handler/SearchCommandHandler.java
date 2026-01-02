@@ -1,5 +1,6 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+import com.socialnetwork.adminbot.constant.PaginationConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
@@ -25,7 +26,7 @@ import java.util.List;
 @Component
 public class SearchCommandHandler extends StatefulCommandHandler {
 
-    private static final int PAGE_SIZE = 5; // Оптимально для мобильного интерфейса
+    private static final int PAGE_SIZE = PaginationConstants.SEARCH_PAGE_SIZE;
     private static final int MIN_QUERY_LENGTH = 3;
     private static final String EMAIL_PATTERN = "^[a-zA-Z0-9@._-]+$";
 
@@ -241,8 +242,10 @@ public class SearchCommandHandler extends StatefulCommandHandler {
         SendMessage message = createMessage(chatId, text.toString());
 
         // Добавляем клавиатуру с действиями и пагинацией
-        // Передаём только ограниченный список пользователей
-        List<AccountDto> usersForKeyboard = users.subList(0, usersToDisplay);
+        // Передаём только ограниченный список пользователей (защита от пустого списка)
+        List<AccountDto> usersForKeyboard = usersToDisplay > 0 
+                ? users.subList(0, usersToDisplay) 
+                : List.of();
         message.setReplyMarkup(KeyboardBuilder.buildSearchResultsKeyboard(
                 usersForKeyboard,
                 currentPage,

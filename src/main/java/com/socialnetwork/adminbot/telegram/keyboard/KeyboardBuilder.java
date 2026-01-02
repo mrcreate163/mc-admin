@@ -1,6 +1,7 @@
 package com.socialnetwork.adminbot.telegram.keyboard;
 
 
+import com.socialnetwork.adminbot.constant.PaginationConstants;
 import com.socialnetwork.adminbot.dto.AccountDto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -274,9 +275,10 @@ public class KeyboardBuilder {
     }
 
     /**
-     * Максимальное количество пользователей для отображения в клавиатуре
+     * Максимальное количество пользователей для отображения в клавиатуре.
+     * Использует общую константу из PaginationConstants.
      */
-    private static final int MAX_USERS_PER_PAGE = 5;
+    private static final int MAX_USERS_PER_PAGE = PaginationConstants.SEARCH_PAGE_SIZE;
     
     /**
      * Клавиатура для результатов поиска с действиями и пагинацией

@@ -96,17 +96,27 @@ public class InviteService {
      * Удалить токен-приглашение
      */
     public void deleteInvite(String token) {
-        // Сначала получаем invite, чтобы удалить username mapping
-        InviteToken invite = getInviteByToken(token);
-
-        if (invite != null) {
+        try {
             String tokenKey = INVITE_TOKEN_PREFIX + token;
-            String usernameKey = INVITE_USERNAME_PREFIX + invite.getTargetUsername().toLowerCase();
-
-            redisTemplate.delete(tokenKey);
-            redisTemplate.delete(usernameKey);
-
-            log.info("Invite deleted: token={}, username={}", token, invite.getTargetUsername());
+            String json = redisTemplate.opsForValue().get(tokenKey);
+            
+            if (json != null) {
+                InviteToken invite = objectMapper.readValue(json, InviteToken.class);
+                String usernameKey = INVITE_USERNAME_PREFIX + invite.getTargetUsername().toLowerCase();
+                
+                redisTemplate.delete(tokenKey);
+                redisTemplate.delete(usernameKey);
+                
+                log.info("Invite deleted: token={}, username={}", token, invite.getTargetUsername());
+            } else {
+                // Token already deleted, just try to clean up
+                redisTemplate.delete(tokenKey);
+            }
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize invite token during delete: {}", token, e);
+            log.warn("Username mapping for token {} might remain orphaned", token);
+            // Still try to delete the token key
+            redisTemplate.delete(INVITE_TOKEN_PREFIX + token);
         }
     }
 

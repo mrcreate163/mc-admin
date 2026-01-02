@@ -83,4 +83,24 @@ public class RedisConfig {
         template.afterPropertiesSet();
         return template;
     }
+
+    /**
+     * RedisTemplate для работы с токенами приглашений
+     * Ключ: String (invite:token:{token} или invite:username:{username})
+     * Значение: String (JSON)
+     */
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // Сериализация ключей и значений как строки
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
+
+        template.afterPropertiesSet();
+        return template;
+    }
 }

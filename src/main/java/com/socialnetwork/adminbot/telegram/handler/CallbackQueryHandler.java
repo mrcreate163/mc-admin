@@ -34,7 +34,7 @@ public class CallbackQueryHandler {
     private final StateTransitionService stateTransitionService;
     private final BanCommandHandler banCommandHandler;
     private final SearchCommandHandler searchCommandHandler;
-    private final AddAdminCommandHandler addAdminCommandHandler; // ⬅️ ДОБАВЛЕНО
+    private final AddAdminCommandHandler addAdminCommandHandler;
 
     public EditMessageText handle(CallbackQuery callbackQuery, Long adminId) {
         String data = callbackQuery.getData();
@@ -134,7 +134,7 @@ public class CallbackQueryHandler {
             return message;
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid user ID in callback: {}", data);
+            log.error("Invalid user ID in callback: {}, error: {}, path: {}", data, e.getMessage(), e.getStackTrace());
             return createErrorMessage(chatId, messageId, "⚠️ Неверный формат ID пользователя");
         } catch (Exception e) {
             log.error("Error handling block callback: {}", e.getMessage(), e);

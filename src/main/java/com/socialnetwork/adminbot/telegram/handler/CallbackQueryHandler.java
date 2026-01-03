@@ -454,7 +454,7 @@ public class CallbackQueryHandler {
             return message;
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid user ID in search_ban callback: {}", data);
+            log.error("Invalid user ID in search_ban callback: {}, error: {}, path: {}", data, e.getMessage(), e.getStackTrace());
             return createErrorMessage(chatId, messageId, "⚠️ Неверный ID пользователя");
         } catch (Exception e) {
             log.error("Error starting ban from search: {}", e.getMessage(), e);

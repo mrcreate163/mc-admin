@@ -29,38 +29,59 @@ public class TextMessageHandler {
     public SendMessage handle(Message message, Long adminId) {
         ConversationState state = conversationStateService.getState(adminId);
         BotState currentState = state.getState();
-
         Long chatId = message.getChatId();
         String text = message.getText();
 
         log.debug("Handling text message: state={}, text='{}', user={}",
                 currentState, text, adminId);
 
+        SendMessage response;
+
         // Роутинг по состояниям
         switch (currentState) {
             case IDLE:
-                return handleIdleState(message);
+                response = handleIdleState(message);
+                break;
 
             case AWAITING_BAN_REASON:
-                return banCommandHandler.handleConversationStep(message, adminId, state);
+                response = banCommandHandler.handleConversationStep(message, adminId, state);
+                break;
 
             case AWAITING_SEARCH_QUERY:
-                return searchCommandHandler.processSearchQuery(message.getChatId(), adminId, text);
+                log.info("🔍 Routing to SearchCommandHandler.processSearchQuery");
+                response = searchCommandHandler.processSearchQuery(message.getChatId(), adminId, text);
+                break;
 
             case AWAITING_ADMIN_TELEGRAM_ID:
-                // return adminManagementHandler.handleTelegramId(message, adminId, state);
-                return createTemporaryMessage(message.getChatId(),
+                response = createTemporaryMessage(message.getChatId(),
                         "Admin management handler coming soon in v2.0");
+                break;
 
             case SHOWING_SEARCH_RESULTS:
-                return handleSearchResultsState(chatId, text, adminId);
+                response = handleSearchResultsState(chatId, text, adminId);
+                break;
 
             default:
                 log.warn("Unhandled state: {} for user {}", currentState, adminId);
-                return createMessage(message.getChatId(),
+                response = createMessage(message.getChatId(),
                         BotMessage.ERROR_UNKNOWN_STATE.raw());
         }
+
+        // 🔍 КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ ПЕРЕД ВОЗВРАТОМ
+        if (response != null) {
+            log.info("📦 TextMessageHandler returning SendMessage:");
+            log.info("  ├─ ChatId: {}", response.getChatId());
+            log.info("  ├─ Text length: {} chars",
+                    response.getText() != null ? response.getText().length() : 0);
+            log.info("  ├─ Has keyboard: {}", response.getReplyMarkup() != null);
+            log.info("  └─ Returning to caller (TelegramBot) for execution");
+        } else {
+            log.error("❌ TextMessageHandler returning NULL response!");
+        }
+
+        return response;
     }
+
 
     /**
      * Обработка сообщения в состоянии IDLE

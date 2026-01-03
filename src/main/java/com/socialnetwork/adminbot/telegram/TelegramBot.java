@@ -103,7 +103,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (TelegramApiException e) {
                 log.error("Error sending message: {}", e.getMessage(), e);
             }
-            return; // ⬅️ Выходим ДО проверки авторизации
+            return;
         }
 
         // Проверка авторизации для всех остальных команд
@@ -113,6 +113,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         log.info("Processing message: {} from user: {}", text, userId);
+
         try {
             SendMessage response;
 
@@ -124,9 +125,68 @@ public class TelegramBot extends TelegramLongPollingBot {
                 response = textMessageHandler.handle(message, userId);
             }
 
-            execute(response);
+            // 🔍 КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ ПЕРЕД execute()
+            if (response == null) {
+                log.error("❌ Response is NULL! Cannot send message.");
+                return;
+            }
+
+            log.info("📤 About to execute SendMessage:");
+            log.info("  ├─ ChatId: {}", response.getChatId());
+            log.info("  ├─ Text length: {} chars",
+                    response.getText() != null ? response.getText().length() : 0);
+            log.info("  ├─ Parse mode: {}", response.getParseMode());
+            log.info("  ├─ Has keyboard: {}", response.getReplyMarkup() != null);
+
+            // Проверка размера текста ПЕРЕД отправкой
+            if (response.getText() != null && response.getText().length() > 4096) {
+                log.error("❌ TEXT TOO LONG: {} chars (limit: 4096)", response.getText().length());
+                log.error("❌ Telegram will REJECT this message!");
+
+                // Отправить fallback сообщение
+                SendMessage errorMsg = createMessage(message.getChatId(),
+                        "❌ Результаты слишком большие для отображения. Уточните поиск.");
+                execute(errorMsg);
+                return;
+            }
+
+            log.info("🚀 Executing Telegram API call...");
+            org.telegram.telegrambots.meta.api.objects.Message sentMessage = execute(response);
+            log.info("✅ Message sent successfully: messageId={}, chatId={}",
+                    sentMessage.getMessageId(),
+                    sentMessage.getChatId());
+
         } catch (TelegramApiException e) {
-            log.error("Error sending message: {}", e.getMessage(), e);
+            // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ОШИБОК TELEGRAM API
+            log.error("❌ ========================================");
+            log.error("❌ TELEGRAM API EXCEPTION OCCURRED");
+            log.error("❌ ========================================");
+            log.error("  Exception type: {}", e.getClass().getSimpleName());
+            log.error("  Error message: {}", e.getMessage());
+
+            if (e instanceof org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException) {
+                org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException apiEx =
+                        (org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException) e;
+                log.error("  API Error Code: {}", apiEx.getErrorCode());
+                log.error("  API Response: {}", apiEx.getApiResponse());
+                log.error("  Parameters: {}", apiEx.getParameters());
+            }
+
+            log.error("  Full stack trace:", e);
+            log.error("❌ ========================================");
+
+            // Попытка отправить уведомление пользователю об ошибке
+            try {
+                SendMessage errorNotification = createMessage(message.getChatId(),
+                        "❌ Ошибка при отправке сообщения.\n" +
+                                "Код ошибки: " + (e instanceof org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
+                                ? ((org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException) e).getErrorCode()
+                                : "unknown") + "\n" +
+                                "Попробуйте снова или обратитесь к администратору.");
+                execute(errorNotification);
+            } catch (TelegramApiException fallbackError) {
+                log.error("Failed to send error notification to user", fallbackError);
+            }
         }
     }
 

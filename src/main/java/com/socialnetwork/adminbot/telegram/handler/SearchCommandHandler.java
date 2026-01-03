@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 import java.util.List;
 
@@ -195,6 +196,9 @@ public class SearchCommandHandler extends StatefulCommandHandler {
     /**
      * Формирование сообщения с результатами поиска
      */
+    /**
+     * Формирование сообщения с результатами поиска
+     */
     private SendMessage buildSearchResultsMessage(
             Long chatId,
             String query,
@@ -214,17 +218,16 @@ public class SearchCommandHandler extends StatefulCommandHandler {
         // Карточки пользователей - ограничиваем до PAGE_SIZE для защиты от некорректного ответа backend
         List<AccountDto> users = results.getContent();
         int usersToDisplay = Math.min(users.size(), PAGE_SIZE);
-        
+
         // Логируем предупреждение если backend вернул больше элементов чем запрошено
         if (users.size() > PAGE_SIZE) {
             log.warn("Backend returned {} users instead of requested {}. Limiting display to {}.",
                     users.size(), PAGE_SIZE, PAGE_SIZE);
         }
-        
+
         for (int i = 0; i < usersToDisplay; i++) {
             AccountDto user = users.get(i);
-
-            text.append(String.format("<b>%d.</b> ", currentPage * PAGE_SIZE + i + 1));
+            text.append(String.format("%d. ", currentPage * PAGE_SIZE + i + 1));
             text.append(BotMessage.SEARCH_USER_CARD.format(
                     escapeHtml(user.getFirstName() != null ? user.getFirstName() : BotMessage.STATUS_UNKNOWN.raw()),
                     escapeHtml(user.getLastName() != null ? user.getLastName() : BotMessage.STATUS_UNKNOWN.raw()),
@@ -239,21 +242,65 @@ public class SearchCommandHandler extends StatefulCommandHandler {
             }
         }
 
-        SendMessage message = createMessage(chatId, text.toString());
+        String messageText = text.toString();
+
+        // 🔍 КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ ТЕКСТА
+        log.info("📝 Building message text:");
+        log.info("  ├─ Text length: {} chars (Telegram limit: 4096)", messageText.length());
+        log.info("  ├─ Lines count: {}", messageText.split("\n").length);
+        log.info("  ├─ Users displayed: {}", usersToDisplay);
+        log.info("  └─ Parse mode: HTML");
+
+        // Проверка превышения лимита
+        if (messageText.length() > 4096) {
+            log.error("❌ MESSAGE TEXT EXCEEDS TELEGRAM LIMIT: {} chars", messageText.length());
+            log.error("❌ Message will be SILENTLY REJECTED by Telegram API!");
+
+            // Показываем первые 200 символов для отладки
+            log.debug("Message preview (first 200 chars): {}",
+                    messageText.substring(0, Math.min(200, messageText.length())));
+        }
+
+        // Проверка на неэкранированные HTML символы
+        if (messageText.contains("<") && !messageText.contains("&lt;")) {
+            log.warn("⚠️ Potential HTML parsing issue: unescaped '<' found");
+        }
+
+        // Логируем содержимое BotMessage для отладки
+        log.debug("SEARCH_RESULTS_HEADER template: {}", BotMessage.SEARCH_RESULTS_HEADER.raw());
+        log.debug("SEARCH_USER_CARD template: {}", BotMessage.SEARCH_USER_CARD.raw());
+
+        SendMessage message = createMessage(chatId, messageText);
 
         // Добавляем клавиатуру с действиями и пагинацией
-        // Передаём только ограниченный список пользователей (защита от пустого списка)
-        List<AccountDto> usersForKeyboard = usersToDisplay > 0 
-                ? users.subList(0, usersToDisplay) 
+        List<AccountDto> usersForKeyboard = usersToDisplay > 0
+                ? users.subList(0, usersToDisplay)
                 : List.of();
-        message.setReplyMarkup(KeyboardBuilder.buildSearchResultsKeyboard(
+
+        InlineKeyboardMarkup keyboard = KeyboardBuilder.buildSearchResultsKeyboard(
                 usersForKeyboard,
                 currentPage,
                 results.getTotalPages()
-        ));
+        );
+
+        message.setReplyMarkup(keyboard);
+
+        // 🔍 ФИНАЛЬНОЕ ЛОГИРОВАНИЕ ПЕРЕД ВОЗВРАТОМ
+        int totalButtons = keyboard.getKeyboard().stream()
+                .mapToInt(List::size)
+                .sum();
+
+        log.info("📦 SendMessage object created:");
+        log.info("  ├─ ChatId: {}", message.getChatId());
+        log.info("  ├─ Text length: {} chars", message.getText().length());
+        log.info("  ├─ Parse mode: {}", message.getParseMode());
+        log.info("  ├─ Has keyboard: {}", message.getReplyMarkup() != null);
+        log.info("  └─ Buttons count: {}", totalButtons);
+        log.info("🚀 Returning SendMessage to caller for execution");
 
         return message;
     }
+
 
     /**
      * Экранирование HTML для Telegram

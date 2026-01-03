@@ -436,13 +436,7 @@ public class CallbackQueryHandler {
             log.info("User {} started ban flow from search for target user {}", adminId, userId);
 
             // Показываем клавиатуру с причинами бана
-            String text = String.join("\n\n",
-                    BotMessage.BAN_HEADER_2.raw(),
-                    BotMessage.USER_INFO_NAME_2.format(escapeHtml(user.getFirstName())),
-                    BotMessage.USER_INFO_EMAIL_2.format(escapeHtml(user.getEmail())),
-                    BotMessage.USER_INFO_ID.format(userId),
-                    BotMessage.CHOOSE_REASON.raw()
-            );
+            String text = formatUserDetails(user);
 
             EditMessageText message = new EditMessageText();
             message.setChatId(chatId.toString());

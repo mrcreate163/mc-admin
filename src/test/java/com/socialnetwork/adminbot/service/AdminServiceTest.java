@@ -166,4 +166,159 @@ class AdminServiceTest {
         assertThat(result.get(0).getIsActive()).isTrue();
         verify(adminRepository).findByIsActiveTrue();
     }
+
+    // ========== NEW TESTS FOR hasRole, hasPermission, getRole, createAdminFromInvite ==========
+
+    @Test
+    @DisplayName("hasRole - should return true when admin has exact role")
+    void hasRole_WhenAdminHasExactRole_ShouldReturnTrue() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.of(testAdmin));
+
+        // When
+        boolean result = adminService.hasRole(TELEGRAM_USER_ID, AdminRole.ADMIN);
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("hasRole - should return false when admin has different role")
+    void hasRole_WhenAdminHasDifferentRole_ShouldReturnFalse() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.of(testAdmin));
+
+        // When
+        boolean result = adminService.hasRole(TELEGRAM_USER_ID, AdminRole.SUPER_ADMIN);
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasRole - should return false when admin not found")
+    void hasRole_WhenAdminNotFound_ShouldReturnFalse() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.empty());
+
+        // When
+        boolean result = adminService.hasRole(TELEGRAM_USER_ID, AdminRole.ADMIN);
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasPermission - should return true when admin has sufficient permission")
+    void hasPermission_WhenSufficientPermission_ShouldReturnTrue() {
+        // Given - testAdmin has ADMIN role (level 3)
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.of(testAdmin));
+
+        // When - checking permission for MODERATOR (level 1)
+        boolean result = adminService.hasPermission(TELEGRAM_USER_ID, AdminRole.MODERATOR);
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("hasPermission - should return false when admin lacks permission")
+    void hasPermission_WhenInsufficientPermission_ShouldReturnFalse() {
+        // Given - testAdmin has ADMIN role (level 3)
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.of(testAdmin));
+
+        // When - checking permission for SUPER_ADMIN (level 4)
+        boolean result = adminService.hasPermission(TELEGRAM_USER_ID, AdminRole.SUPER_ADMIN);
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasPermission - should return false when admin not found")
+    void hasPermission_WhenAdminNotFound_ShouldReturnFalse() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.empty());
+
+        // When
+        boolean result = adminService.hasPermission(TELEGRAM_USER_ID, AdminRole.MODERATOR);
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("getRole - should return admin role")
+    void getRole_WhenAdminExists_ShouldReturnRole() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.of(testAdmin));
+
+        // When
+        AdminRole result = adminService.getRole(TELEGRAM_USER_ID);
+
+        // Then
+        assertThat(result).isEqualTo(AdminRole.ADMIN);
+    }
+
+    @Test
+    @DisplayName("getRole - should throw exception when admin not found")
+    void getRole_WhenAdminNotFound_ShouldThrowException() {
+        // Given
+        when(adminRepository.findByTelegramUserId(TELEGRAM_USER_ID))
+                .thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> adminService.getRole(TELEGRAM_USER_ID))
+                .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("createAdminFromInvite - should create admin with invitedBy field")
+    void createAdminFromInvite_WhenNotExists_ShouldCreateWithInvitedBy() {
+        // Given
+        Long invitedBy = 987654321L;
+        when(adminRepository.existsByTelegramUserId(TELEGRAM_USER_ID)).thenReturn(false);
+        when(adminRepository.save(any(Admin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        Admin result = adminService.createAdminFromInvite(
+                TELEGRAM_USER_ID,
+                "newadmin",
+                "New Admin",
+                AdminRole.MODERATOR,
+                invitedBy
+        );
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTelegramUserId()).isEqualTo(TELEGRAM_USER_ID);
+        assertThat(result.getUsername()).isEqualTo("newadmin");
+        assertThat(result.getFirstName()).isEqualTo("New Admin");
+        assertThat(result.getRole()).isEqualTo(AdminRole.MODERATOR);
+        assertThat(result.getIsActive()).isTrue();
+
+        verify(adminRepository).save(any(Admin.class));
+    }
+
+    @Test
+    @DisplayName("createAdminFromInvite - should throw exception when admin exists")
+    void createAdminFromInvite_WhenExists_ShouldThrowException() {
+        // Given
+        when(adminRepository.existsByTelegramUserId(TELEGRAM_USER_ID)).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> adminService.createAdminFromInvite(
+                TELEGRAM_USER_ID, "admin", "Admin", AdminRole.ADMIN, 999L))
+                .isInstanceOf(DuplicateAdminException.class)
+                .hasMessage("Admin already exists");
+
+        verify(adminRepository, never()).save(any());
+    }
 }

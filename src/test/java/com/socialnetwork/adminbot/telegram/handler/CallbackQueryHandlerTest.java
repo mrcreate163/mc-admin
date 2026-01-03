@@ -51,9 +51,10 @@ class CallbackQueryHandlerTest {
     @Mock
     private SearchCommandHandler searchCommandHandler;
 
-    private CallbackQueryHandler callbackQueryHandler;
-
+    @Mock
     private AddAdminCommandHandler addAdminCommandHandler;
+
+    private CallbackQueryHandler callbackQueryHandler;
 
     private CallbackQuery mockCallbackQuery;
     private Message mockMessage;

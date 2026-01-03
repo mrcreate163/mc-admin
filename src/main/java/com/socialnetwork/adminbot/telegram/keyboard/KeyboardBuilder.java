@@ -3,6 +3,7 @@ package com.socialnetwork.adminbot.telegram.keyboard;
 
 import com.socialnetwork.adminbot.constant.PaginationConstants;
 import com.socialnetwork.adminbot.dto.AccountDto;
+import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -12,6 +13,7 @@ import java.util.*;
  * Утилита для создания inline клавиатур бота.
  * Все тексты кнопок хранятся в BotMessage для централизованного управления.
  */
+@Slf4j
 public class KeyboardBuilder {
 
     /**
@@ -303,7 +305,10 @@ public class KeyboardBuilder {
 
         // Ограничиваем количество пользователей для защиты от превышения лимитов Telegram
         int usersToProcess = Math.min(users.size(), MAX_USERS_PER_PAGE);
-        
+
+        log.info("🔨 Building search keyboard: users={}, currentPage={}, totalPages={}",
+                usersToProcess, currentPage + 1, totalPages);
+
         // Кнопки действий для каждого пользователя
         for (int i = 0; i < usersToProcess; i++) {
             AccountDto user = users.get(i);
@@ -312,23 +317,30 @@ public class KeyboardBuilder {
             List<InlineKeyboardButton> row = new ArrayList<>();
 
             // Кнопка "Просмотр"
+            String viewCallback = "search_view:" + user.getId();
             row.add(createButton(
                     String.format("%d. 👁 Просмотр", userNumber),
-                    "search_view:" + user.getId()
+                    viewCallback
             ));
 
             // Кнопка "Бан" или "Разбан"
+            String actionCallback;
             if (user.getIsBlocked()) {
+                actionCallback = "search_unban:" + user.getId();
                 row.add(createButton(
                         "✅ Разбан",
-                        "search_unban:" + user.getId()
+                        actionCallback
                 ));
             } else {
+                actionCallback = "search_ban:" + user.getId();
                 row.add(createButton(
                         "🚫 Бан",
-                        "search_ban:" + user.getId()
+                        actionCallback
                 ));
             }
+
+            log.debug("  User {}: view={} bytes, action={} bytes",
+                    userNumber, viewCallback.length(), actionCallback.length());
 
             keyboard.add(row);
         }
@@ -373,6 +385,64 @@ public class KeyboardBuilder {
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         markup.setKeyboard(keyboard);
+
+        // 🔍 КРИТИЧЕСКАЯ ДИАГНОСТИКА
+        int totalButtons = keyboard.stream()
+                .mapToInt(List::size)
+                .sum();
+
+        int maxCallbackLength = keyboard.stream()
+                .flatMap(List::stream)
+                .mapToInt(btn -> btn.getCallbackData().length())
+                .max()
+                .orElse(0);
+
+        int totalCallbackBytes = keyboard.stream()
+                .flatMap(List::stream)
+                .mapToInt(btn -> btn.getCallbackData().length())
+                .sum();
+
+        // Приблизительный подсчёт размера JSON для reply_markup
+        int estimatedJsonSize = keyboard.stream()
+                .flatMap(List::stream)
+                .mapToInt(btn ->
+                        btn.getText().length() +           // текст кнопки
+                                btn.getCallbackData().length() +    // callback_data
+                                60                                   // JSON overhead: {"text":"","callback_data":""},
+                )
+                .sum() + 100; // Дополнительный overhead на структуру [[],[]]
+
+        log.info("📊 Keyboard statistics:");
+        log.info("  ├─ Total buttons: {} (Telegram soft limit: ~100)", totalButtons);
+        log.info("  ├─ Max callback length: {} bytes (Telegram limit: 64)", maxCallbackLength);
+        log.info("  ├─ Total callback bytes: {} bytes", totalCallbackBytes);
+        log.info("  ├─ Estimated JSON size: {} bytes (soft limit: ~4000-5000)", estimatedJsonSize);
+        log.info("  └─ Rows: {}", keyboard.size());
+
+        // Проверка на превышение лимитов
+        if (totalButtons > 100) {
+            log.error("❌ TOO MANY BUTTONS: {} (soft limit: 100)", totalButtons);
+        }
+        if (maxCallbackLength > 64) {
+            log.error("❌ CALLBACK TOO LONG: {} bytes (HARD LIMIT: 64)", maxCallbackLength);
+        }
+        if (estimatedJsonSize > 4096) {
+            log.warn("⚠️ KEYBOARD POSSIBLY TOO LARGE: {} bytes (soft limit: ~4096)", estimatedJsonSize);
+        }
+
+        // Дополнительно: вывод всех callback_data для детального анализа
+        if (log.isDebugEnabled()) {
+            log.debug("📋 All callback_data:");
+            keyboard.forEach(row ->
+                    row.forEach(btn ->
+                            log.debug("  - '{}' (text: '{}', {} bytes)",
+                                    btn.getCallbackData(),
+                                    btn.getText(),
+                                    btn.getCallbackData().length())
+                    )
+            );
+        }
+
         return markup;
     }
 

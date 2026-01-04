@@ -9,8 +9,6 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Install curl for health check
-RUN apk add --no-cache curl
 
 # Copy the jar file from build stage
 COPY --from=build /app/target/*.jar app.jar
@@ -21,10 +19,6 @@ USER spring:spring
 
 # Expose port (matches application.yml server.port: 8091)
 EXPOSE 8091
-
-# Health check using Spring Boot Actuator
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8090/actuator/health || exit 1
 
 # Set JVM options
 ENV JAVA_OPTS="-Xmx512m -Xms256m"

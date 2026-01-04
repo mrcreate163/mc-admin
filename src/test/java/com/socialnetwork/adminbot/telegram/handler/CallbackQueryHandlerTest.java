@@ -5,6 +5,7 @@ import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
 import com.socialnetwork.adminbot.dto.StatisticsDto;
 import com.socialnetwork.adminbot.service.*;
+import com.socialnetwork.adminbot.telegram.handler.callback.*;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,12 +21,17 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit тесты для CallbackQueryHandler (маршрутизатор callback-запросов).
+ * Тестирует корректную маршрутизацию к специализированным обработчикам.
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CallbackQueryHandler Unit Tests")
 class CallbackQueryHandlerTest {
@@ -55,6 +61,8 @@ class CallbackQueryHandlerTest {
     private AddAdminCommandHandler addAdminCommandHandler;
 
     private CallbackQueryHandler callbackQueryHandler;
+    private UserBlockCallbackHandler userBlockCallbackHandler;
+    private NavigationCallbackHandler navigationCallbackHandler;
 
     private CallbackQuery mockCallbackQuery;
     private Message mockMessage;
@@ -66,15 +74,39 @@ class CallbackQueryHandlerTest {
 
     @BeforeEach
     void setUp() {
-        callbackQueryHandler = new CallbackQueryHandler(
+        // Создаём специализированные обработчики с моками
+        userBlockCallbackHandler = new UserBlockCallbackHandler(
                 userService,
-                statisticsService,
                 auditLogService,
                 conversationStateService,
                 stateTransitionService,
-                banCommandHandler,
-                searchCommandHandler,
+                banCommandHandler
+        );
+
+        navigationCallbackHandler = new NavigationCallbackHandler(
+                statisticsService,
+                auditLogService
+        );
+
+        SearchCallbackHandler searchCallbackHandler = new SearchCallbackHandler(
+                userService,
+                auditLogService,
+                conversationStateService,
+                searchCommandHandler
+        );
+
+        AdminManagementCallbackHandler adminManagementCallbackHandler = new AdminManagementCallbackHandler(
                 addAdminCommandHandler
+        );
+
+        // Создаём маршрутизатор со списком обработчиков
+        callbackQueryHandler = new CallbackQueryHandler(
+                List.of(
+                        userBlockCallbackHandler,
+                        searchCallbackHandler,
+                        adminManagementCallbackHandler,
+                        navigationCallbackHandler
+                )
         );
 
         mockCallbackQuery = mock(CallbackQuery.class);

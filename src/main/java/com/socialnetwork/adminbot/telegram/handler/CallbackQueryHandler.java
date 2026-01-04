@@ -472,8 +472,8 @@ public class CallbackQueryHandler {
             // Получаем информацию о пользователе
             AccountDto user = userService.getUserById(userId);
 
-            // Проверяем, заблокирован ли
-            if (!user.getIsBlocked()) {
+            // Проверяем, заблокирован ли (используем Boolean.TRUE.equals для null-safety)
+            if (!Boolean.TRUE.equals(user.getIsBlocked())) {
                 return createErrorMessage(chatId, messageId,
                         "⚠️ Пользователь не заблокирован.");
             }

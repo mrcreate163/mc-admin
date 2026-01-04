@@ -49,11 +49,11 @@ public class AdminRegistrationController {
     @PostMapping("/register")
     public ResponseEntity<?> registerAdmin(@RequestBody RegistrationRequest request) {
         log.info("Registration attempt: token={}, telegramId={}",
-                request.token, request.telegramId);
+                request.getToken(), request.getTelegramId());
 
         try {
             // Валидация входных данных
-            if (request.token == null || request.token.isBlank()) {
+            if (request.getToken() == null || request.getToken().isBlank()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
@@ -62,7 +62,7 @@ public class AdminRegistrationController {
                         ));
             }
 
-            if (request.telegramId == null) {
+            if (request.getTelegramId() == null) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
@@ -71,7 +71,7 @@ public class AdminRegistrationController {
                         ));
             }
 
-            if (request.firstName == null || request.firstName.isBlank()) {
+            if (request.getFirstName() == null || request.getFirstName().isBlank()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
@@ -82,10 +82,10 @@ public class AdminRegistrationController {
 
             // Активируем администратора
             Admin activatedAdmin = inviteService.activateInvitation(
-                    request.token,
-                    request.telegramId,
-                    request.username,
-                    request.firstName
+                    request.getToken(),
+                    request.getTelegramId(),
+                    request.getUsername(),
+                    request.getFirstName()
             );
 
             log.info("Successfully activated admin: id={}, role={}",
@@ -209,10 +209,12 @@ public class AdminRegistrationController {
     /**
      * DTO для запроса регистрации
      */
+    @lombok.Data
+    @lombok.NoArgsConstructor
     public static class RegistrationRequest {
-        public String token;
-        public Long telegramId;
-        public String username;
-        public String firstName;
+        private String token;
+        private Long telegramId;
+        private String username;
+        private String firstName;
     }
 }

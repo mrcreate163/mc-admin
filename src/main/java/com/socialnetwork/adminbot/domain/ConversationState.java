@@ -61,15 +61,27 @@ public class ConversationState {
     }
 
     /**
-     * Получить данные из контекста
+     * Получить данные из контекста с безопасной обработкой типов
      */
-    @SuppressWarnings("unchecked")
     public <T> T getData(String key, Class<T> type) {
         Object value = this.data.get(key);
         if (value == null) {
             return null;
         }
-        return (T) value;
+        if (type.isInstance(value)) {
+            return type.cast(value);
+        }
+        // Handle type conversion for Number types (Redis deserialization may return different types)
+        if (type == Integer.class && value instanceof Number) {
+            return type.cast(((Number) value).intValue());
+        }
+        if (type == Long.class && value instanceof Number) {
+            return type.cast(((Number) value).longValue());
+        }
+        if (type == Double.class && value instanceof Number) {
+            return type.cast(((Number) value).doubleValue());
+        }
+        throw new ClassCastException("Cannot cast " + value.getClass().getName() + " to " + type.getName());
     }
 
     /**

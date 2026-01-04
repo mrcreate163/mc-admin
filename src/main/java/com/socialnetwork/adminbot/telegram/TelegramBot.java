@@ -19,6 +19,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Component
@@ -63,13 +64,27 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.callbackQueryHandler = callbackQueryHandler;
         this.textMessageHandler = textMessageHandler;
 
-        // Parse admin whitelist from configuration
+        // Parse admin whitelist from configuration with validation
         this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
                 .map(String::trim)
-                .map(Long::parseLong)
+                .filter(s -> !s.isEmpty())
+                .map(this::parseAdminId)
+                .filter(Objects::nonNull)
                 .toList();
 
         log.info("TelegramBot initialized with {} whitelisted admins", adminWhitelist.size());
+    }
+
+    /**
+     * Parse admin ID from string, returning null for invalid values
+     */
+    private Long parseAdminId(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid admin ID in whitelist, skipping: '{}'", value);
+            return null;
+        }
     }
 
     @Override

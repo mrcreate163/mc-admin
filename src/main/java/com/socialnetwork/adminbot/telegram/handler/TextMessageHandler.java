@@ -57,6 +57,23 @@ public class TextMessageHandler {
                         "Admin management handler coming soon in v2.0");
                 break;
 
+            case AWAITING_ADMIN_USERNAME:
+                // New invite-based admin flow - handled by AddAdminCommandHandler
+                response = createMessage(message.getChatId(),
+                        "⚠️ Пожалуйста, используйте кнопки для выбора роли или отмены.");
+                break;
+
+            case AWAITING_ADMIN_ROLE:
+                response = createMessage(message.getChatId(),
+                        "⚠️ Пожалуйста, используйте кнопки для выбора роли.");
+                break;
+
+            case CONFIRMING_ADMIN_INVITE_CREATION:
+            case CONFIRMING_INVITE_ACCEPTANCE:
+                response = createMessage(message.getChatId(),
+                        "⚠️ Пожалуйста, используйте кнопки для подтверждения или отмены.");
+                break;
+
             case SHOWING_SEARCH_RESULTS:
                 response = handleSearchResultsState(chatId, text, adminId);
                 break;

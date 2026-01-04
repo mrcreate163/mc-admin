@@ -41,9 +41,8 @@ public class KeyboardBuilder {
                 createButton("🟠 ADMIN", "add_admin:role:ADMIN")
         ));
 
-        rows.add(List.of(
-                createButton("🔴 SUPER_ADMIN", "add_admin:role:SUPER_ADMIN")
-        ));
+        // Кнопка SUPER_ADMIN удалена: SUPER_ADMIN не может назначать себе подобных
+        // (level 4 > level 4 возвращает false в AdminRole.canAssignRole())
 
         // Кнопка отмены
         rows.add(List.of(

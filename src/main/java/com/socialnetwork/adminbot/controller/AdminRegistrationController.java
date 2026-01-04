@@ -14,12 +14,12 @@ import java.util.Map;
 
 /**
  * REST контроллер для регистрации администраторов через пригласительные ссылки.
- *
+ * <p>
  * Endpoints:
  * - POST /api/v1/admin-bot/register - активация администратора по токену
  * - GET /api/v1/admin-bot/invite/validate - проверка валидности токена
  * - GET /api/v1/admin-bot/health - health check
- *
+ * <p>
  * Этот контроллер может использоваться как через REST API,
  * так и косвенно через Telegram deep links (обработка в StartCommandHandler).
  */
@@ -34,13 +34,13 @@ public class AdminRegistrationController {
 
     /**
      * Активация администратора по пригласительному токену
-     *
+     * <p>
      * POST /api/v1/admin-bot/register
      * Body: {
-     *   "token": "abc123xyz456",
-     *   "telegram_id": 123456789,
-     *   "username": "john_doe",  // optional
-     *   "first_name": "John"
+     * "token": "abc123xyz456",
+     * "telegram_id": 123456789,
+     * "username": "john_doe",  // optional
+     * "first_name": "John"
      * }
      *
      * @param request тело запроса с данными активации
@@ -51,86 +51,64 @@ public class AdminRegistrationController {
         log.info("Registration attempt: token={}, telegramId={}",
                 request.getToken(), request.getTelegramId());
 
-        try {
-            // Валидация входных данных
-            if (request.getToken() == null || request.getToken().isBlank()) {
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                                "success", false,
-                                "error", "Токен приглашения не может быть пустым"
-                        ));
-            }
-
-            if (request.getTelegramId() == null) {
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                                "success", false,
-                                "error", "Telegram ID не может быть пустым"
-                        ));
-            }
-
-            if (request.getFirstName() == null || request.getFirstName().isBlank()) {
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                                "success", false,
-                                "error", "Имя не может быть пустым"
-                        ));
-            }
-
-            // Активируем администратора
-            Admin activatedAdmin = inviteService.activateInvitation(
-                    request.getToken(),
-                    request.getTelegramId(),
-                    request.getUsername(),
-                    request.getFirstName()
-            );
-
-            log.info("Successfully activated admin: id={}, role={}",
-                    activatedAdmin.getTelegramUserId(), activatedAdmin.getRole());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Администратор успешно активирован",
-                    "admin", Map.of(
-                            "telegram_id", activatedAdmin.getTelegramUserId(),
-                            "username", activatedAdmin.getUsername() != null
-                                    ? activatedAdmin.getUsername() : "",
-                            "first_name", activatedAdmin.getFirstName(),
-                            "role", activatedAdmin.getRole().name(),
-                            "created_at", activatedAdmin.getCreatedAt().toString(),
-                            "invited_by", activatedAdmin.getInvitedBy()
-                    )
-            ));
-
-        } catch (IllegalArgumentException e) {
-            // Токен невалиден, истёк или уже использован
-            log.warn("Invalid registration attempt: {}", e.getMessage());
-
+        // Валидация входных данных
+        if (request.getToken() == null || request.getToken().isBlank()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "success", false,
-                            "error", e.getMessage()
-                    ));
-
-        } catch (Exception e) {
-            log.error("Error during admin registration: {}", e.getMessage(), e);
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "success", false,
-                            "error", "Внутренняя ошибка сервера. Попробуйте позже."
+                            "error", "Токен приглашения не может быть пустым"
                     ));
         }
+
+        if (request.getTelegramId() == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "success", false,
+                            "error", "Telegram ID не может быть пустым"
+                    ));
+        }
+
+        if (request.getFirstName() == null || request.getFirstName().isBlank()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "success", false,
+                            "error", "Имя не может быть пустым"
+                    ));
+        }
+
+        // Активируем администратора
+        Admin activatedAdmin = inviteService.activateInvitation(
+                request.getToken(),
+                request.getTelegramId(),
+                request.getUsername(),
+                request.getFirstName()
+        );
+
+        log.info("Successfully activated admin: id={}, role={}",
+                activatedAdmin.getTelegramUserId(), activatedAdmin.getRole());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Администратор успешно активирован",
+                "admin", Map.of(
+                        "telegram_id", activatedAdmin.getTelegramUserId(),
+                        "username", activatedAdmin.getUsername() != null
+                                ? activatedAdmin.getUsername() : "",
+                        "first_name", activatedAdmin.getFirstName(),
+                        "role", activatedAdmin.getRole().name(),
+                        "created_at", activatedAdmin.getCreatedAt().toString(),
+                        "invited_by", activatedAdmin.getInvitedBy()
+                )
+        ));
+
     }
 
     /**
      * Проверка валидности пригласительного токена (без активации)
-     *
+     * <p>
      * GET /api/v1/admin-bot/invite/validate?token=abc123xyz
      *
      * @param token токен для проверки
@@ -140,59 +118,39 @@ public class AdminRegistrationController {
     public ResponseEntity<?> validateInviteToken(@RequestParam("token") String token) {
         log.debug("Validating invite token: {}", token);
 
-        try {
-            if (token == null || token.isBlank()) {
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                                "valid", false,
-                                "error", "Токен не может быть пустым"
-                        ));
-            }
-
-            boolean isValid = inviteService.isTokenValid(token);
-
-            if (isValid) {
-                // Получаем информацию о приглашении
-                AdminInvitation invitation = inviteService.getInvitationByToken(token);
-
-                return ResponseEntity.ok(Map.of(
-                        "valid", true,
-                        "role", invitation.getRole().name(),
-                        "expires_at", invitation.getExpiresAt().toString(),
-                        "hours_until_expiry", invitation.getHoursUntilExpiry(),
-                        "created_by", invitation.getCreatedBy()
-                ));
-            } else {
-                return ResponseEntity.ok(Map.of(
-                        "valid", false,
-                        "message", "Токен недействителен, истёк или уже использован"
-                ));
-            }
-
-        } catch (IllegalArgumentException e) {
-            log.warn("Token validation failed: {}", e.getMessage());
-
-            return ResponseEntity.ok(Map.of(
-                    "valid", false,
-                    "message", "Токен не найден"
-            ));
-
-        } catch (Exception e) {
-            log.error("Error validating invite token: {}", e.getMessage(), e);
-
+        if (token == null || token.isBlank()) {
             return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "valid", false,
-                            "error", "Ошибка проверки токена"
+                            "error", "Токен не может быть пустым"
                     ));
+        }
+
+        boolean isValid = inviteService.isTokenValid(token);
+
+        if (isValid) {
+            // Получаем информацию о приглашении
+            AdminInvitation invitation = inviteService.getInvitationByToken(token);
+
+            return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "role", invitation.getRole().name(),
+                    "expires_at", invitation.getExpiresAt().toString(),
+                    "hours_until_expiry", invitation.getHoursUntilExpiry(),
+                    "created_by", invitation.getCreatedBy()
+            ));
+        } else {
+            return ResponseEntity.ok(Map.of(
+                    "valid", false,
+                    "message", "Токен недействителен, истёк или уже использован"
+            ));
         }
     }
 
     /**
      * Health check endpoint
-     *
+     * <p>
      * GET /api/v1/admin-bot/health
      *
      * @return статус сервиса

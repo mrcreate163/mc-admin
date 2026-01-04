@@ -19,8 +19,8 @@ COPY --from=build /app/target/*.jar app.jar
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
-# Expose port (matches application.yml server.port: 8090)
-EXPOSE 8090
+# Expose port (matches application.yml server.port: 8091)
+EXPOSE 8091
 
 # Health check using Spring Boot Actuator
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

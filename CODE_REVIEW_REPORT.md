@@ -359,7 +359,7 @@ case AWAITING_ADMIN_ROLE:
 
 ---
 
-### 4.2 🏗️ Смешанная ответственность в CallbackQueryHandler
+### 4.2 🏗️ Смешанная ответственность в CallbackQueryHandler (✅ исправлено)
 
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/handler/CallbackQueryHandler.java`
 

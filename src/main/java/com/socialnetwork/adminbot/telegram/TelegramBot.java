@@ -66,6 +66,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Parse admin whitelist from configuration
         this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
                 .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .filter(s -> s.matches("\\d+"))
                 .map(Long::parseLong)
                 .toList();
 

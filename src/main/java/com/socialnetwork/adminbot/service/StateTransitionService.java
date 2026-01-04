@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,7 +29,7 @@ public class StateTransitionService {
     private static final Map<BotState, Set<BotState>> ALLOWED_TRANSITIONS = createAllowedTransitions();
 
     private static Map<BotState, Set<BotState>> createAllowedTransitions() {
-        Map<BotState, Set<BotState>> transitions = new java.util.HashMap<>();
+        Map<BotState, Set<BotState>> transitions = new HashMap<>();
 
         transitions.put(BotState.IDLE, EnumSet.of(
                 BotState.AWAITING_SEARCH_QUERY,
@@ -89,7 +91,7 @@ public class StateTransitionService {
                 BotState.IDLE
         ));
 
-        return java.util.Collections.unmodifiableMap(transitions);
+        return Collections.unmodifiableMap(transitions);
     }
 
     /**

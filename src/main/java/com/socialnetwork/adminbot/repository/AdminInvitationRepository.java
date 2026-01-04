@@ -3,6 +3,7 @@ package com.socialnetwork.adminbot.repository;
 import com.socialnetwork.adminbot.entity.AdminInvitation;
 import com.socialnetwork.adminbot.entity.AdminRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -93,6 +94,7 @@ public interface AdminInvitationRepository extends JpaRepository<AdminInvitation
      * @param now текущее время
      * @return количество удалённых записей
      */
+    @Modifying
     @Query("DELETE FROM AdminInvitation ai WHERE ai.isUsed = false AND ai.expiresAt < :now")
     int deleteExpiredInvitations(@Param("now") LocalDateTime now);
 }

@@ -40,8 +40,8 @@ services:
 # Telegram
 telegram:
   bot:
-    token: ${TELEGRAM_BOT_TOKEN:8537923153:AAH5mqBbQ__UPG7giA7DwING5ESwId35NbE}
-    username: ${TELEGRAM_BOT_USERNAME:SocialNetworkAdminBot}
+    token: ${TELEGRAM_BOT_TOKEN}
+    username: ${TELEGRAM_BOT_USERNAME}
 
 # Admin whitelist
 admin:

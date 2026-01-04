@@ -17,10 +17,12 @@
 
 ## 1. Критические проблемы (Приоритет: ВЫСОКИЙ)
 
-### 1.1 ⚠️ Токен бота в application.yml
+### 1.1 ⚠️ Токен бота в application.yml (✅ исправлено)
+
 **Файл:** `src/main/resources/application.yml` (строка 42-44)
 
 **Проблема:**
+
 ```yaml
 telegram:
   bot:
@@ -30,22 +32,26 @@ telegram:
 Токен Telegram бота **захардкожен** как значение по умолчанию. Даже если это тестовый токен, это нарушает лучшие практики безопасности и может привести к утечке секретов.
 
 **Рекомендация:**
+
 - Удалить значение по умолчанию для токена
 - Использовать только переменные окружения без fallback
 - Если токен был реальным, немедленно отозвать его через @BotFather
 
 ---
 
-### 1.2 ⚠️ Неправильный тип Primary Key в AdminRepository
+### 1.2 ⚠️ Неправильный тип Primary Key в AdminRepository (✅ исправлено)
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/repository/AdminRepository.java` (строка 11)
 
 **Проблема:**
+
 ```java
 @Repository
 public interface AdminRepository extends JpaRepository<Admin, UUID> {
 ```
 
 Но в сущности `Admin` используется `Long` как Primary Key:
+
 ```java
 @Id
 @Column(name = "telegram_user_id")
@@ -55,16 +61,19 @@ private Long telegramUserId;
 **Последствия:** Методы `findById()`, `deleteById()`, `existsById()` не будут работать корректно.
 
 **Рекомендация:**
+
 ```java
 public interface AdminRepository extends JpaRepository<Admin, Long> {
 ```
 
 ---
 
-### 1.3 ⚠️ Отсутствие @Modifying для DELETE запроса
+### 1.3 ⚠️ Отсутствие @Modifying для DELETE запроса (✅ исправлено)
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/repository/AdminInvitationRepository.java` (строка 95-97)
 
 **Проблема:**
+
 ```java
 @Query("DELETE FROM AdminInvitation ai WHERE ai.isUsed = false AND ai.expiresAt < :now")
 int deleteExpiredInvitations(@Param("now") LocalDateTime now);
@@ -73,6 +82,7 @@ int deleteExpiredInvitations(@Param("now") LocalDateTime now);
 DELETE запрос требует аннотации `@Modifying`, иначе будет выброшено исключение.
 
 **Рекомендация:**
+
 ```java
 @Modifying
 @Transactional
@@ -83,12 +93,14 @@ int deleteExpiredInvitations(@Param("now") LocalDateTime now);
 ---
 
 ### 1.4 ⚠️ Deprecated состояния не обработаны в StateTransitionService
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/service/StateTransitionService.java`
 
 **Проблема:**
 В `BotState` есть новые состояния (`AWAITING_ADMIN_USERNAME`, `CONFIRMING_ADMIN_INVITE_CREATION`, `CONFIRMING_INVITE_ACCEPTANCE`), которые не добавлены в `ALLOWED_TRANSITIONS`, но deprecated состояния (`AWAITING_ADMIN_TELEGRAM_ID`, `CONFIRMING_ADMIN_CREATION`) остаются.
 
 **Рекомендация:**
+
 - Добавить новые состояния в карту переходов
 - Удалить или пометить deprecated переходы
 
@@ -97,9 +109,11 @@ int deleteExpiredInvitations(@Param("now") LocalDateTime now);
 ## 2. Проблемы безопасности (Приоритет: ВЫСОКИЙ)
 
 ### 2.1 🔐 Возможность SUPER_ADMIN создавать себе подобных
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/keyboard/KeyboardBuilder.java` (строка 41-44)
 
 **Проблема:**
+
 ```java
 rows.add(List.of(
     createButton("🔴 SUPER_ADMIN", "add_admin:role:SUPER_ADMIN")
@@ -109,20 +123,24 @@ rows.add(List.of(
 В клавиатуре есть кнопка для создания SUPER_ADMIN, хотя в `AdminRole.canAssignRole()` SUPER_ADMIN не может назначать сам себе подобных (level 4 > level 4 возвращает false).
 
 **Рекомендация:**
+
 - Убрать кнопку SUPER_ADMIN из клавиатуры
 - Или добавить серверную проверку (уже есть в InviteService)
 
 ---
 
 ### 2.2 🔐 Отсутствие Rate Limiting для REST API
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/controller/AdminRegistrationController.java`
 
 **Проблема:**
 REST endpoints (`/register`, `/invite/validate`) не имеют ограничения на количество запросов, что может привести к:
+
 - Brute-force атакам на токены приглашений
 - DoS атакам
 
 **Рекомендация:**
+
 - Добавить Spring Security с rate limiting
 - Или использовать библиотеку Bucket4j
 - Минимум: ограничить попытки активации по IP
@@ -130,21 +148,25 @@ REST endpoints (`/register`, `/invite/validate`) не имеют огранич�
 ---
 
 ### 2.3 🔐 Отсутствие валидации при работе с UUID из пользовательского ввода
+
 **Несколько файлов**
 
 **Проблема:**
 UUID.fromString() выбрасывает `IllegalArgumentException`, который обрабатывается, но нет дополнительной защиты от IDOR (Insecure Direct Object Reference).
 
 **Рекомендация:**
+
 - Добавить логирование подозрительных запросов
 - Рассмотреть добавление проверки прав доступа
 
 ---
 
 ### 2.4 🔐 Публичные поля в DTO контроллера
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/controller/AdminRegistrationController.java` (строка 212-217)
 
 **Проблема:**
+
 ```java
 public static class RegistrationRequest {
     public String token;
@@ -157,18 +179,19 @@ public static class RegistrationRequest {
 Публичные поля нарушают инкапсуляцию и не позволяют добавить валидацию.
 
 **Рекомендация:**
+
 ```java
 @Data
 @NoArgsConstructor
 public static class RegistrationRequest {
     @NotBlank
     private String token;
-    
+  
     @NotNull
     private Long telegramId;
-    
+  
     private String username;
-    
+  
     @NotBlank
     private String firstName;
 }
@@ -179,9 +202,11 @@ public static class RegistrationRequest {
 ## 3. Потенциальные ошибки времени выполнения (Приоритет: СРЕДНИЙ)
 
 ### 3.1 ⚡ NPE при парсинге whitelist админов
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/TelegramBot.java` (строка 67-70)
 
 **Проблема:**
+
 ```java
 this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
     .map(String::trim)
@@ -192,6 +217,7 @@ this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
 Если `adminWhitelistStr` содержит невалидные числа или пустую строку, будет выброшено `NumberFormatException`.
 
 **Рекомендация:**
+
 ```java
 this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
     .map(String::trim)
@@ -204,9 +230,11 @@ this.adminWhitelist = Arrays.stream(adminWhitelistStr.split(","))
 ---
 
 ### 3.2 ⚡ Unchecked cast в ConversationState.getData()
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/domain/ConversationState.java` (строка 66-73)
 
 **Проблема:**
+
 ```java
 @SuppressWarnings("unchecked")
 public <T> T getData(String key, Class<T> type) {
@@ -221,6 +249,7 @@ public <T> T getData(String key, Class<T> type) {
 При десериализации из Redis типы могут не совпадать (например, Integer вместо Long).
 
 **Рекомендация:**
+
 ```java
 public <T> T getData(String key, Class<T> type) {
     Object value = this.data.get(key);
@@ -244,9 +273,11 @@ public <T> T getData(String key, Class<T> type) {
 ---
 
 ### 3.3 ⚡ NullPointerException при проверке isBlocked
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/handler/CallbackQueryHandler.java` (строка 482)
 
 **Проблема:**
+
 ```java
 if (!user.getIsBlocked()) {
 ```
@@ -254,6 +285,7 @@ if (!user.getIsBlocked()) {
 Если `getIsBlocked()` возвращает `null`, будет NPE.
 
 **Рекомендация:**
+
 ```java
 if (!Boolean.TRUE.equals(user.getIsBlocked())) {
 ```
@@ -261,9 +293,11 @@ if (!Boolean.TRUE.equals(user.getIsBlocked())) {
 ---
 
 ### 3.4 ⚡ Потенциальный бесконечный цикл
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/service/InviteService.java` (строка 216-238)
 
 **Проблема:**
+
 ```java
 do {
     // генерация токена
@@ -277,15 +311,18 @@ do {
 При проблемах с базой данных или если все токены заняты (маловероятно), будет RuntimeException без понятного сообщения для пользователя.
 
 **Рекомендация:**
+
 - Создать кастомное исключение
 - Добавить обработку в вызывающем коде
 
 ---
 
 ### 3.5 ⚡ Отсутствие обработки null в TextMessageHandler
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/handler/TextMessageHandler.java` (строка 40-50)
 
 **Проблема:**
+
 ```java
 switch (currentState) {
     case AWAITING_ADMIN_ROLE:
@@ -296,6 +333,7 @@ switch (currentState) {
 
 **Рекомендация:**
 Добавить обработку для `AWAITING_ADMIN_ROLE`:
+
 ```java
 case AWAITING_ADMIN_ROLE:
     return createMessage(message.getChatId(),
@@ -306,10 +344,12 @@ case AWAITING_ADMIN_ROLE:
 
 ## 4. Проблемы архитектуры и дизайна (Приоритет: СРЕДНИЙ)
 
-### 4.1 🏗️ Несоответствие между AI_CONTEXT.md и реальным кодом
+### 4.1 🏗️ Несоответствие между AI_CONTEXT.md и реальным кодом (✅ исправлено)
+
 **Файл:** `AI_CONTEXT.md`
 
 **Проблема:**
+
 - Указана Java 21, но в pom.xml `<java.version>17</java.version>`
 - Указан Spring Boot 3.x, но в pom.xml версия `4.0.1`
 - Структура пакетов устарела
@@ -320,10 +360,12 @@ case AWAITING_ADMIN_ROLE:
 ---
 
 ### 4.2 🏗️ Смешанная ответственность в CallbackQueryHandler
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/handler/CallbackQueryHandler.java`
 
 **Проблема:**
 Класс содержит 677 строк и обрабатывает:
+
 - Блокировку пользователей
 - Статистику
 - Поиск
@@ -334,6 +376,7 @@ case AWAITING_ADMIN_ROLE:
 
 **Рекомендация:**
 Разбить на несколько специализированных обработчиков:
+
 ```
 CallbackQueryRouter.java
 UserBlockCallbackHandler.java
@@ -345,21 +388,23 @@ NavigationCallbackHandler.java
 ---
 
 ### 4.3 🏗️ Отсутствие GlobalExceptionHandler для REST API
+
 **Проблема:**
 Контроллер `AdminRegistrationController` обрабатывает исключения локально, что приводит к дублированию кода.
 
 **Рекомендация:**
 Создать `@ControllerAdvice`:
+
 ```java
 @ControllerAdvice
 public class GlobalExceptionHandler {
-    
+  
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.badRequest()
             .body(Map.of("success", false, "error", e.getMessage()));
     }
-    
+  
     // ...
 }
 ```
@@ -367,19 +412,23 @@ public class GlobalExceptionHandler {
 ---
 
 ### 4.4 🏗️ Отсутствие отдельного слоя для маппинга DTO
+
 **Проблема:**
 Маппинг между сущностями и DTO выполняется вручную в сервисах и хендлерах.
 
 **Рекомендация:**
+
 - Использовать MapStruct для автоматического маппинга
 - Создать отдельные Mapper классы
 
 ---
 
 ### 4.5 🏗️ Неиспользуемый импорт UUID в AdminDto
+
 **Файл:** `src/main/java/com/socialnetwork/adminbot/dto/AdminDto.java` (строка 9)
 
 **Проблема:**
+
 ```java
 import java.util.UUID;
 // ...
@@ -389,6 +438,7 @@ private UUID id;
 Поле `id` типа UUID, но в сущности `Admin` используется `Long telegramUserId` как PK.
 
 **Рекомендация:**
+
 - Удалить поле `id: UUID` из AdminDto
 - Или изменить на `Long id`
 
@@ -397,7 +447,9 @@ private UUID id;
 ## 5. Дублирование кода (Приоритет: СРЕДНИЙ)
 
 ### 5.1 📋 Дублирование метода escapeHtml
+
 **Файлы:**
+
 - `CallbackQueryHandler.java` (строка 668-676)
 - `SearchCommandHandler.java` (строка 261-266)
 - `BanCommandHandler.java` (строка 277-280)
@@ -406,6 +458,7 @@ private UUID id;
 
 **Рекомендация:**
 Использовать один метод из `BotMessage.escapeHtml()` везде:
+
 ```java
 // Везде заменить на:
 BotMessage.escapeHtml(text)
@@ -414,8 +467,10 @@ BotMessage.escapeHtml(text)
 ---
 
 ### 5.2 📋 Дублирование createMessage методов
+
 **Проблема:**
 Метод `createMessage(Long chatId, String text)` повторяется в:
+
 - `BaseCommandHandler.java`
 - `StartCommandHandler.java`
 - `TextMessageHandler.java`
@@ -423,6 +478,7 @@ BotMessage.escapeHtml(text)
 
 **Рекомендация:**
 Вынести в утилитный класс:
+
 ```java
 public class TelegramMessageFactory {
     public static SendMessage createHtmlMessage(Long chatId, String text) {
@@ -438,7 +494,9 @@ public class TelegramMessageFactory {
 ---
 
 ### 5.3 📋 Дублирование форматирования информации о пользователе
+
 **Файлы:**
+
 - `UserCommandHandler.buildUserInfoMessage()`
 - `CallbackQueryHandler.formatUserDetails()`
 - `SearchCommandHandler.buildSearchResultsMessage()`
@@ -451,10 +509,12 @@ public class TelegramMessageFactory {
 ## 6. Улучшения качества кода (Приоритет: НИЗКИЙ)
 
 ### 6.1 📝 Отсутствие Javadoc для публичных методов
+
 **Проблема:**
 Многие публичные методы не имеют документации.
 
 **Примеры:**
+
 - `AdminService.hasRole()`
 - `AdminService.hasPermission()`
 - `UserService.searchUsersByEmail()`
@@ -465,13 +525,17 @@ public class TelegramMessageFactory {
 ---
 
 ### 6.2 📝 Magic numbers и strings
+
 **Примеры:**
+
 - `StateTransitionService.java`: Hardcoded состояния
 - `InviteService.java` строка 32-33:
+
   ```java
   private static final int INVITE_TOKEN_LENGTH = 32;
   private static final int INVITE_EXPIRY_HOURS = 24;
   ```
+
   Это хорошо, но аналогичные константы разбросаны по проекту.
 
 **Рекомендация:**
@@ -480,15 +544,20 @@ public class TelegramMessageFactory {
 ---
 
 ### 6.3 📝 Неконсистентное использование логирования
+
 **Проблема:**
+
 - Некоторые методы логируют на DEBUG, другие на INFO
 - Разный формат логов
 
 **Пример:**
+
 ```java
 log.info("Created new admin from invite: telegramUserId={}, role={}, invitedBy={}",
 ```
+
 vs
+
 ```java
 log.info("User {} successfully banned user {} with reason: {}",
 ```
@@ -499,12 +568,15 @@ log.info("User {} successfully banned user {} with reason: {}",
 ---
 
 ### 6.4 📝 Неиспользуемые переменные и импорты
+
 **Файл:** `AdminService.java`
+
 ```java
 import java.util.List;  // List используется
 ```
 
 **Файл:** `BanCommandHandler.java`
+
 ```java
 import com.socialnetwork.adminbot.domain.StateDataKey;  // Используется
 import com.socialnetwork.adminbot.service.StateTransitionService;  // Используется
@@ -515,9 +587,11 @@ import com.socialnetwork.adminbot.service.StateTransitionService;  // Испол
 ---
 
 ### 6.5 📝 Неоптимальные конструкции
+
 **Файл:** `CallbackQueryHandler.java` (строка 77)
 
 **Проблема:**
+
 ```java
 } else if (data.equals("noop")) {
     return null; // Игнорируем нажатие на неактивные кнопки
@@ -533,7 +607,9 @@ import com.socialnetwork.adminbot.service.StateTransitionService;  // Испол
 ## 7. Конфигурация и DevOps (Приоритет: СРЕДНИЙ)
 
 ### 7.1 🐳 Несоответствие портов в конфигурации
+
 **Проблема:**
+
 - `application.yml`: `server.port: 8090`
 - `.gitlab-ci.yml`: `-p 8091:8091`
 - `Dockerfile`: `EXPOSE 8080`
@@ -544,9 +620,11 @@ import com.socialnetwork.adminbot.service.StateTransitionService;  // Испол
 ---
 
 ### 7.2 🐳 Отсутствие health check в Dockerfile
+
 **Файл:** `Dockerfile`
 
 **Рекомендация:**
+
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8090/actuator/health || exit 1
@@ -555,9 +633,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 ---
 
 ### 7.3 🐳 Незащищённые переменные окружения в docker-compose
+
 **Файл:** `docker-compose.yml`
 
 **Проблема:**
+
 ```yaml
 POSTGRES_PASSWORD: password
 ```
@@ -568,6 +648,7 @@ POSTGRES_PASSWORD: password
 ---
 
 ### 7.4 🐳 Дублирование deploy:dev и deploy:prod
+
 **Файл:** `.gitlab-ci.yml`
 
 **Проблема:**
@@ -575,6 +656,7 @@ POSTGRES_PASSWORD: password
 
 **Рекомендация:**
 Использовать YAML anchors или extends:
+
 ```yaml
 .deploy_template: &deploy_template
   stage: deploy
@@ -590,9 +672,11 @@ deploy:dev:
 ---
 
 ### 7.5 🐳 Устаревший Spring Boot 4.0.1
+
 **Файл:** `pom.xml` (строка 8)
 
 **Проблема:**
+
 ```xml
 <version>4.0.1</version>
 ```
@@ -607,9 +691,11 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ## 8. Несоответствия и неконсистентность (Приоритет: НИЗКИЙ)
 
 ### 8.1 🔄 Смешанные языки в сообщениях
+
 **Файл:** `BotMessage.java`
 
 **Проблема:**
+
 - Большинство сообщений на русском
 - Некоторые на английском: `"Harassment"`, `"Bot/Fake"`, `"N/A"`
 
@@ -619,7 +705,9 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ---
 
 ### 8.2 🔄 Неконсистентное именование
+
 **Проблемы:**
+
 - `BAN_TARGET_USER_ID` vs `BAN_TARGET_USERNAME` (underscore)
 - `searchCurrentPage` vs `totalPages` (camelCase vs not)
 - `isActive` vs `isUsed` vs `is_active` (в разных слоях)
@@ -627,7 +715,9 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ---
 
 ### 8.3 🔄 Неконсистентное использование Boolean
+
 **Проблемы:**
+
 - `Boolean isActive` vs `boolean isBlocked`
 - `Boolean.TRUE.equals(account.getIsBlocked())` vs `account.getIsBlocked()`
 
@@ -637,7 +727,9 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ---
 
 ### 8.4 🔄 Смешанный стиль комментариев
+
 **Примеры:**
+
 - `//TODO fix:` (с пробелом после TODO)
 - `// ⭐ КРИТИЧНО:` (с emoji)
 - `/**` Javadoc стиль
@@ -648,32 +740,42 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ## 9. Рекомендации по улучшению (Приоритет: НИЗКИЙ)
 
 ### 9.1 💡 Добавить Swagger/OpenAPI для REST API
+
 Добавить `springdoc-openapi-starter-webmvc-ui` для автодокументации API.
 
 ### 9.2 💡 Добавить кэширование для часто запрашиваемых данных
+
 Использовать `@Cacheable` для:
+
 - `AdminService.findByTelegramId()`
 - `StatisticsService.getStatistics()`
 
 ### 9.3 💡 Добавить метрики Prometheus
+
 Для мониторинга:
+
 - Количество обработанных команд
 - Время ответа
 - Количество ошибок
 
 ### 9.4 💡 Добавить интеграционные тесты с Testcontainers
+
 Для тестирования с реальными PostgreSQL и Redis.
 
 ### 9.5 💡 Рассмотреть использование Telegram Bot API Webhooks
+
 Вместо Long Polling для лучшей производительности в продакшене.
 
 ### 9.6 💡 Добавить команду /help
+
 Для отображения справки по командам.
 
 ### 9.7 💡 Добавить пагинацию для AuditLog
+
 В текущей реализации нет возможности просматривать историю действий.
 
 ### 9.8 💡 Реализовать очистку устаревших приглашений
+
 Добавить scheduled task для `deleteExpiredInvitations()`.
 
 ---
@@ -683,25 +785,26 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ### ✅ Положительные стороны
 
 1. **Хорошая структура проекта**
+
    - Чёткое разделение на слои (controller, service, repository)
    - Отдельный пакет для Telegram handlers
    - Использование State Machine для сложных диалогов
-
 2. **Качественная реализация State Machine**
+
    - Использование Redis для хранения состояний
    - Версионирование состояний
    - TTL для автоматической очистки
-
 3. **Продуманная система ролей**
+
    - Иерархия ролей с уровнями
    - Проверка прав `canAssignRole()`
    - Система приглашений
-
 4. **Хорошее покрытие тестами**
+
    - 191 тест согласно README
    - Моки для внешних зависимостей
-
 5. **Использование современных технологий**
+
    - Spring Boot 3.x/4.x
    - Lombok
    - Liquibase для миграций
@@ -709,46 +812,49 @@ Spring Boot 4.0 ещё не выпущен (на момент написания
 ### ⚠️ Области для улучшения
 
 1. **Безопасность**
+
    - Убрать захардкоженные секреты
    - Добавить rate limiting
    - Улучшить валидацию входных данных
-
 2. **Качество кода**
+
    - Устранить дублирование
    - Стандартизировать логирование
    - Добавить документацию
-
 3. **Архитектура**
+
    - Разбить большие классы
    - Добавить GlobalExceptionHandler
    - Унифицировать конфигурацию
-
 4. **DevOps**
+
    - Исправить несоответствия в конфигурациях
    - Добавить health checks
    - Унифицировать CI/CD pipeline
 
 ### 📊 Сводная таблица проблем
 
-| Приоритет | Количество | Описание |
-|-----------|------------|----------|
-| ВЫСОКИЙ   | 9          | Критические ошибки и безопасность |
-| СРЕДНИЙ   | 15         | Потенциальные ошибки, архитектура, DevOps |
-| НИЗКИЙ    | 15+        | Качество кода, рекомендации |
+
+| Приоритет | Количество | Описание                                                        |
+| ------------------ | -------------------- | ----------------------------------------------------------------------- |
+| ВЫСОКИЙ     | 9                    | Критические ошибки и безопасность         |
+| СРЕДНИЙ     | 15                   | Потенциальные ошибки, архитектура, DevOps |
+| НИЗКИЙ       | 15+                  | Качество кода, рекомендации                     |
 
 ### 🎯 Приоритетный план действий
 
 1. **Немедленно:**
+
    - Удалить токен бота из application.yml
    - Исправить тип в AdminRepository
    - Добавить @Modifying для DELETE запроса
-
 2. **В ближайшее время:**
+
    - Исправить потенциальные NPE
    - Добавить обработку новых состояний
    - Устранить дублирование escapeHtml
-
 3. **Планово:**
+
    - Рефакторинг CallbackQueryHandler
    - Добавить GlobalExceptionHandler
    - Унифицировать конфигурацию портов

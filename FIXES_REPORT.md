@@ -13,6 +13,7 @@
 | 3.2 | СРЕДНИЙ | Unchecked cast в ConversationState.getData() | ✅ Исправлено |
 | 3.3 | СРЕДНИЙ | NullPointerException при проверке isBlocked | ✅ Исправлено |
 | 3.5 | СРЕДНИЙ | Отсутствие обработки AWAITING_ADMIN_ROLE в TextMessageHandler | ✅ Исправлено |
+| 4.2 | СРЕДНИЙ | Смешанная ответственность в CallbackQueryHandler | ✅ Исправлено |
 | 4.5 | СРЕДНИЙ | Неиспользуемый UUID в AdminDto | ✅ Исправлено |
 | 7.1 | СРЕДНИЙ | Несоответствие портов в конфигурации | ✅ Исправлено |
 | 7.2 | СРЕДНИЙ | Отсутствие health check в Dockerfile | ✅ Исправлено |
@@ -195,6 +196,75 @@ case CONFIRMING_INVITE_ACCEPTANCE:
 
 ---
 
+### 4.2 Смешанная ответственность в CallbackQueryHandler
+
+**Файл:** `src/main/java/com/socialnetwork/adminbot/telegram/handler/CallbackQueryHandler.java`
+
+**Проблема:**
+Класс содержал 677 строк и обрабатывал несколько различных функциональных областей:
+- Блокировку/разблокировку пользователей
+- Статистику
+- Поиск пользователей
+- Управление администраторами
+- Навигацию
+
+Это нарушало принцип единственной ответственности (Single Responsibility Principle - SRP).
+
+**Решение:**
+Выполнен рефакторинг с разбиением на специализированные обработчики:
+
+1. **Создан интерфейс `CallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/CallbackHandler.java`):
+   - Определяет контракт для всех callback-обработчиков
+   - Методы: `canHandle(String callbackData)` и `handle(CallbackQuery, Long, Integer, Long)`
+
+2. **Создан базовый класс `BaseCallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/BaseCallbackHandler.java`):
+   - Содержит общие утилитные методы: `createErrorMessage()`, `createMessage()`, `escapeHtml()`
+   - Реализует интерфейс `CallbackHandler`
+
+3. **Создан `UserBlockCallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/UserBlockCallbackHandler.java`):
+   - Обрабатывает: `block:*`, `unblock:*`, `ban_reason:*`, `ban_confirm`, `ban_cancel`
+   - Отвечает за блокировку/разблокировку пользователей
+
+4. **Создан `SearchCallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/SearchCallbackHandler.java`):
+   - Обрабатывает: `search_page:*`, `search_view:*`, `search_ban:*`, `search_unban:*`, `search_new`, `search_cancel`
+   - Отвечает за функции поиска
+
+5. **Создан `AdminManagementCallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/AdminManagementCallbackHandler.java`):
+   - Обрабатывает: `add_admin:*`
+   - Отвечает за управление администраторами
+
+6. **Создан `NavigationCallbackHandler`** (`src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/NavigationCallbackHandler.java`):
+   - Обрабатывает: `show_stats`, `main_menu`, `stats:*`, `noop`
+   - Отвечает за навигацию и статистику
+
+7. **Рефакторинг `CallbackQueryHandler`**:
+   - Класс преобразован в маршрутизатор (Router)
+   - Принимает `List<CallbackHandler>` через конструктор (dependency injection)
+   - Перебирает обработчики и делегирует первому подходящему
+   - Уменьшен размер с ~670 строк до ~85 строк
+
+**Преимущества рефакторинга:**
+- Каждый класс теперь имеет единственную ответственность
+- Легче добавлять новые типы callback-обработчиков
+- Улучшена тестируемость - можно тестировать каждый обработчик отдельно
+- Упрощена поддержка и расширение кода
+- Соблюдены принципы SOLID (особенно SRP и OCP)
+
+**Структура созданных файлов:**
+```
+src/main/java/com/socialnetwork/adminbot/telegram/handler/callback/
+├── CallbackHandler.java              # Интерфейс
+├── BaseCallbackHandler.java          # Базовый класс с утилитами
+├── UserBlockCallbackHandler.java     # Обработчик блокировки
+├── SearchCallbackHandler.java        # Обработчик поиска
+├── AdminManagementCallbackHandler.java # Обработчик управления админами
+└── NavigationCallbackHandler.java    # Обработчик навигации
+```
+
+**Статус:** ✅ Исправлено
+
+---
+
 ### 7.1 Несоответствие портов в конфигурации
 
 **Файлы:**
@@ -230,5 +300,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 ---
 
 *Отчёт обновлён: 2026-01-04*
-*Все 10 проблем среднего и высокого приоритета исправлены*
-*Тесты: 191 passed, 0 failed*
+*Всего 11 проблем среднего и высокого приоритета исправлено*
+*Тесты: все тесты проходят успешно*

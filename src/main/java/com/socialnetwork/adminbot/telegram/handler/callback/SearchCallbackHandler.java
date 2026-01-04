@@ -278,39 +278,4 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
 
         return message;
     }
-
-    /**
-     * Форматирование детальной информации о пользователе.
-     */
-    private String formatUserDetails(AccountDto user) {
-        // Безопасное экранирование всех пользовательских данных
-        String safeFirstName = escapeHtml(user.getFirstName() != null ? user.getFirstName() : "N/A");
-        String safeLastName = escapeHtml(user.getLastName() != null ? user.getLastName() : "N/A");
-        String safeEmail = escapeHtml(user.getEmail() != null ? user.getEmail() : "N/A");
-        String safePhone = escapeHtml(user.getPhone() != null ? user.getPhone() : "N/A");
-        String safeCountry = escapeHtml(user.getCountry() != null ? user.getCountry() : "N/A");
-        String safeCity = escapeHtml(user.getCity() != null ? user.getCity() : "N/A");
-        String safeBirthDate = user.getBirthDate() != null ? user.getBirthDate().toString() : "N/A";
-        String safeRegDate = user.getRegDate() != null ? user.getRegDate().toString() : "N/A";
-        String safeLastOnline = user.getLastOnlineTime() != null ? user.getLastOnlineTime().toString() : "N/A";
-        String safeAbout = escapeHtml(user.getAbout() != null ? user.getAbout() : "N/A");
-
-        String onlineStatus = Boolean.TRUE.equals(user.getIsOnline()) ? "✅ Да" : "❌ Нет";
-        String blockedStatus = Boolean.TRUE.equals(user.getIsBlocked()) ? "🔴 Да" : "🟢 Нет";
-
-        // Формируем текст напрямую без String.format для пользовательских данных
-        return "👤 <b>Информация о пользователе</b>\n\n" +
-                "🆔 ID: <code>" + user.getId() + "</code>\n" +
-                "📧 Email: <code>" + safeEmail + "</code>\n" +
-                "👤 Имя: " + safeFirstName + " " + safeLastName + "\n" +
-                "📱 Телефон: " + safePhone + "\n" +
-                "🌍 Страна: " + safeCountry + "\n" +
-                "🏙️ Город: " + safeCity + "\n" +
-                "📅 Дата регистрации: " + safeRegDate + "\n" +
-                "🎂 Дата рождения: " + safeBirthDate + "\n" +
-                "⏰ Последняя активность: " + safeLastOnline + "\n" +
-                "🟢 Онлайн: " + onlineStatus + "\n" +
-                "🔒 Заблокирован: " + blockedStatus + "\n" +
-                "📝 О себе: " + safeAbout;
-    }
 }

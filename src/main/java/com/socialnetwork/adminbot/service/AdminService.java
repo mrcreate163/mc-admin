@@ -13,12 +13,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Сервис для управления администраторами бота.
+ * Предоставляет методы для поиска, создания и проверки прав администраторов.
+ *
+ * @since 1.0
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminService {
     private final AdminRepository adminRepository;
 
+    /**
+     * Найти администратора по Telegram ID.
+     *
+     * @param telegramUserId Telegram ID пользователя
+     * @return найденный администратор
+     * @throws UnauthorizedException если администратор не найден
+     */
     public Admin findByTelegramId(Long telegramUserId) {
         return adminRepository.findByTelegramUserId(telegramUserId)
                 .orElseThrow(() -> {
@@ -27,14 +40,22 @@ public class AdminService {
                 });
     }
 
+    /**
+     * Проверить, является ли пользователь администратором.
+     *
+     * @param telegramUserId Telegram ID пользователя
+     * @return true если пользователь является администратором
+     */
     public boolean isAdmin(Long telegramUserId) {
         return adminRepository.existsByTelegramUserId(telegramUserId);
     }
 
-
-
     /**
-     * Проверить, имеет ли администратор определенную роль
+     * Проверить, имеет ли администратор определенную роль.
+     *
+     * @param telegramUserId Telegram ID администратора
+     * @param role роль для проверки
+     * @return true если администратор имеет указанную роль
      */
     public boolean hasRole(Long telegramUserId, AdminRole role) {
         return adminRepository.findByTelegramUserId(telegramUserId)
@@ -43,9 +64,10 @@ public class AdminService {
     }
 
     /**
-     * Проверить, имеет ли администратор достаточно прав для выполнения действия
+     * Проверить, имеет ли администратор достаточно прав для выполнения действия.
+     * Использует иерархию ролей для проверки уровня доступа.
      *
-     * @param telegramUserId ID администратора
+     * @param telegramUserId Telegram ID администратора
      * @param requiredRole минимально требуемая роль
      * @return true если права достаточны
      */
@@ -56,12 +78,23 @@ public class AdminService {
     }
 
     /**
-     * Получить роль администратора
+     * Получить роль администратора.
+     *
+     * @param telegramUserId Telegram ID администратора
+     * @return роль администратора
+     * @throws UnauthorizedException если администратор не найден
      */
     public AdminRole getRole(Long telegramUserId) {
         return findByTelegramId(telegramUserId).getRole();
     }
 
+    /**
+     * Создать нового администратора.
+     *
+     * @param dto данные для создания администратора
+     * @return созданный администратор
+     * @throws DuplicateAdminException если администратор с таким Telegram ID уже существует
+     */
     @Transactional
     public Admin createAdmin(AdminDto dto) {
         if (adminRepository.existsByTelegramUserId(dto.getTelegramUserId())) {
@@ -77,13 +110,13 @@ public class AdminService {
                 .build();
 
         Admin saved = adminRepository.save(admin);
-        log.info("Created new admin: telegramUserId={}, role={}",
+        log.info("action=create_admin, telegramUserId={}, role={}, status=success",
                 saved.getTelegramUserId(), saved.getRole());
         return saved;
     }
 
     /**
-     * Создать администратора из приглашения
+     * Создать администратора из приглашения.
      *
      * @param telegramUserId Telegram ID нового админа
      * @param username Telegram username
@@ -91,6 +124,7 @@ public class AdminService {
      * @param role Роль
      * @param invitedBy Telegram ID пригласившего SUPER_ADMIN
      * @return созданный Admin
+     * @throws DuplicateAdminException если администратор с таким Telegram ID уже существует
      */
     @Transactional
     public Admin createAdminFromInvite(Long telegramUserId, String username,
@@ -108,11 +142,16 @@ public class AdminService {
                 .build();
 
         Admin saved = adminRepository.save(admin);
-        log.info("Created new admin from invite: telegramUserId={}, role={}, invitedBy={}",
+        log.info("action=create_admin_from_invite, telegramUserId={}, role={}, invitedBy={}, status=success",
                 saved.getTelegramUserId(), saved.getRole(), invitedBy);
         return saved;
     }
 
+    /**
+     * Получить всех активных администраторов.
+     *
+     * @return список активных администраторов
+     */
     public List<Admin> getAllActiveAdmins() {
         return adminRepository.findByIsActiveTrue();
     }

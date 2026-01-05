@@ -1,15 +1,17 @@
 package com.socialnetwork.adminbot.telegram.handler.base;
 
+import com.socialnetwork.adminbot.telegram.messages.TelegramMessageFactory;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 /**
- * Базовый абстрактный класс для всех command handlers
+ * Базовый абстрактный класс для всех command handlers.
+ * Предоставляет общие методы для создания сообщений и извлечения аргументов.
  */
 public abstract class BaseCommandHandler {
 
     /**
-     * Обработать команду
+     * Обработать команду.
      *
      * @param message Сообщение от Telegram
      * @param adminId ID администратора
@@ -18,24 +20,30 @@ public abstract class BaseCommandHandler {
     public abstract SendMessage handle(Message message, Long adminId);
 
     /**
-     * Получить имя команды (например, "start", "ban", "search")
+     * Получить имя команды (например, "start", "ban", "search").
+     *
+     * @return имя команды без слеша
      */
     public abstract String getCommandName();
 
     /**
-     * Создать простое текстовое сообщение
+     * Создать простое текстовое сообщение с HTML форматированием.
+     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
+     *
+     * @param chatId ID чата
+     * @param text текст сообщения
+     * @return настроенный объект SendMessage
      */
     protected SendMessage createMessage(Long chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.toString());
-        message.setText(text);
-        message.setParseMode("HTML");
-        return message;
+        return TelegramMessageFactory.createHtmlMessage(chatId, text);
     }
 
     /**
-     * Извлечь аргументы из команды
-     * Например: "/ban uuid-here" -> ["uuid-here"]
+     * Извлечь аргументы из команды.
+     * Например: "/ban uuid-here" -&gt; ["uuid-here"]
+     *
+     * @param text текст команды
+     * @return массив аргументов (без самой команды)
      */
     protected String[] extractArgs(String text) {
         String[] parts = text.split(" ");

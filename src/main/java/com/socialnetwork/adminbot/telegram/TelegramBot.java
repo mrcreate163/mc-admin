@@ -1,11 +1,13 @@
 package com.socialnetwork.adminbot.telegram;
 
 import com.socialnetwork.adminbot.config.TelegramBotConfig;
+import com.socialnetwork.adminbot.constant.BotConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.service.AdminService;
 import com.socialnetwork.adminbot.service.ConversationStateService;
 import com.socialnetwork.adminbot.telegram.handler.*;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
+import com.socialnetwork.adminbot.telegram.messages.TelegramMessageFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -154,8 +156,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.info("  ├─ Has keyboard: {}", response.getReplyMarkup() != null);
 
             // Проверка размера текста ПЕРЕД отправкой
-            if (response.getText() != null && response.getText().length() > 4096) {
-                log.error("❌ TEXT TOO LONG: {} chars (limit: 4096)", response.getText().length());
+            if (response.getText() != null && response.getText().length() > BotConstants.TELEGRAM_MESSAGE_MAX_LENGTH) {
+                log.error("❌ TEXT TOO LONG: {} chars (limit: {})", response.getText().length(),
+                        BotConstants.TELEGRAM_MESSAGE_MAX_LENGTH);
                 log.error("❌ Telegram will REJECT this message!");
 
                 // Отправить fallback сообщение
@@ -300,11 +303,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Создать SendMessage с HTML форматированием.
+     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
+     *
+     * @param chatId ID чата
+     * @param text текст сообщения
+     * @return настроенный объект SendMessage
+     */
     private SendMessage createMessage(Long chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.toString());
-        message.setText(text);
-        message.setParseMode("HTML");
-        return message;
+        return TelegramMessageFactory.createHtmlMessage(chatId, text);
     }
 }

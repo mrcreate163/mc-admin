@@ -1,5 +1,6 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+import com.socialnetwork.adminbot.constant.BotConstants;
 import com.socialnetwork.adminbot.constant.PaginationConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
@@ -21,15 +22,16 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import java.util.List;
 
 /**
- * Handler для команды поиска пользователей с пагинацией через State Machine
+ * Handler для команды поиска пользователей с пагинацией через State Machine.
+ * Поддерживает поиск по email с валидацией запроса.
+ *
+ * @since 1.0
  */
 @Slf4j
 @Component
 public class SearchCommandHandler extends StatefulCommandHandler {
 
     private static final int PAGE_SIZE = PaginationConstants.SEARCH_PAGE_SIZE;
-    private static final int MIN_QUERY_LENGTH = 3;
-    private static final String EMAIL_PATTERN = "^[a-zA-Z0-9@._-]+$";
 
     private final UserService userService;
     private final StateTransitionService stateTransitionService;
@@ -96,13 +98,15 @@ public class SearchCommandHandler extends StatefulCommandHandler {
      */
     public SendMessage processSearchQuery(Long chatId, Long adminId, String query) {
         // Валидация запроса
-        if (query.length() < MIN_QUERY_LENGTH) {
-            log.warn("Search query too short: '{}' (user={})", query, adminId);
+        if (query.length() < BotConstants.MIN_SEARCH_QUERY_LENGTH) {
+            log.warn("action=search_query_validation, query='{}', adminId={}, error=query_too_short",
+                    query, adminId);
             return createMessage(chatId, BotMessage.SEARCH_MIN_LENGTH.raw());
         }
 
-        if (!query.matches(EMAIL_PATTERN)) {
-            log.warn("Invalid search query format: '{}' (user={})", query, adminId);
+        if (!query.matches(BotConstants.EMAIL_SEARCH_PATTERN)) {
+            log.warn("action=search_query_validation, query='{}', adminId={}, error=invalid_format",
+                    query, adminId);
             return createMessage(chatId, BotMessage.SEARCH_INVALID_QUERY.raw());
         }
 
@@ -209,7 +213,7 @@ public class SearchCommandHandler extends StatefulCommandHandler {
 
         // Заголовок
         text.append(BotMessage.SEARCH_RESULTS_HEADER.format(
-                escapeHtml(query),
+                BotMessage.escapeHtml(query),
                 results.getTotalElements(),
                 currentPage + 1,
                 results.getTotalPages()
@@ -229,9 +233,9 @@ public class SearchCommandHandler extends StatefulCommandHandler {
             AccountDto user = users.get(i);
             text.append(String.format("%d. ", currentPage * PAGE_SIZE + i + 1));
             text.append(BotMessage.SEARCH_USER_CARD.format(
-                    escapeHtml(user.getFirstName() != null ? user.getFirstName() : BotMessage.STATUS_UNKNOWN.raw()),
-                    escapeHtml(user.getLastName() != null ? user.getLastName() : BotMessage.STATUS_UNKNOWN.raw()),
-                    escapeHtml(user.getEmail()),
+                    BotMessage.escapeHtml(user.getFirstName() != null ? user.getFirstName() : BotMessage.STATUS_UNKNOWN.raw()),
+                    BotMessage.escapeHtml(user.getLastName() != null ? user.getLastName() : BotMessage.STATUS_UNKNOWN.raw()),
+                    BotMessage.escapeHtml(user.getEmail()),
                     user.getId(),
                     user.getIsBlocked() ? "🔴 Заблокирован" : "🟢 Активен"
             ));
@@ -302,13 +306,4 @@ public class SearchCommandHandler extends StatefulCommandHandler {
     }
 
 
-    /**
-     * Экранирование HTML для Telegram
-     */
-    private String escapeHtml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-    }
 }

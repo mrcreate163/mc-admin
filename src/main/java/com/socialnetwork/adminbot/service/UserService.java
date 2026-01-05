@@ -10,6 +10,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+/**
+ * Сервис для работы с пользователями социальной сети.
+ * Предоставляет методы для получения информации о пользователях,
+ * блокировки/разблокировки и поиска.
+ *
+ * @since 1.0
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -19,26 +26,27 @@ public class UserService {
     private final AuditLogService auditLogService;
 
     /**
-     * Получить пользователя по ID
+     * Получить пользователя по ID.
      *
      * @param userId UUID пользователя
      * @return AccountDto с информацией о пользователе
      */
     public AccountDto getUserById(UUID userId) {
-        log.debug("Getting user by ID: {}", userId);
+        log.debug("action=get_user_by_id, userId={}", userId);
 
         return accountClient.getAccountById(userId);
     }
 
     /**
-     * Заблокировать пользователя
+     * Заблокировать пользователя.
      *
      * @param userId UUID пользователя для блокировки
      * @param adminTelegramId Telegram ID администратора
      * @param reason причина блокировки (опционально)
      */
     public void blockUser(UUID userId, Long adminTelegramId, String reason) {
-        log.info("Blocking user {} by admin {}, reason: {}", userId, adminTelegramId, reason);
+        log.info("action=block_user, userId={}, adminId={}, reason={}, status=started",
+                userId, adminTelegramId, reason);
 
         // Блокируем пользователя через AccountClient
         accountClient.blockAccount(userId);
@@ -51,17 +59,19 @@ public class UserService {
                 reason
         );
 
-        log.info("User {} successfully blocked by admin {}", userId, adminTelegramId);
+        log.info("action=block_user, userId={}, adminId={}, status=success",
+                userId, adminTelegramId);
     }
 
     /**
-     * Разблокировать пользователя
+     * Разблокировать пользователя.
      *
      * @param userId UUID пользователя для разблокировки
      * @param adminTelegramId Telegram ID администратора
      */
     public void unblockUser(UUID userId, Long adminTelegramId) {
-        log.info("Unblocking user {} by admin {}", userId, adminTelegramId);
+        log.info("action=unblock_user, userId={}, adminId={}, status=started",
+                userId, adminTelegramId);
 
         // Разблокируем пользователя через AccountClient
         accountClient.unblockAccount(userId);
@@ -74,23 +84,24 @@ public class UserService {
                 null
         );
 
-        log.info("User {} successfully unblocked by admin {}", userId, adminTelegramId);
+        log.info("action=unblock_user, userId={}, adminId={}, status=success",
+                userId, adminTelegramId);
     }
 
     /**
-     * Получить страницу пользователей с пагинацией
+     * Получить страницу пользователей с пагинацией.
      *
      * @param page номер страницы (начиная с 0)
      * @param size размер страницы
      * @return PageAccountDto с результатами
      */
     public PageAccountDto getUsersPage(int page, int size) {
-        log.debug("Fetching users page: page={}, size={}", page, size);
+        log.debug("action=get_users_page, page={}, size={}", page, size);
         return accountClient.getAccountsPage(page, size, "regDate,desc");
     }
 
     /**
-     * Поиск пользователей по email с пагинацией
+     * Поиск пользователей по email с пагинацией.
      *
      * @param email поисковый запрос (email или часть email)
      * @param page номер страницы (начиная с 0)
@@ -98,7 +109,7 @@ public class UserService {
      * @return PageAccountDto с результатами поиска
      */
     public PageAccountDto searchUsersByEmail(String email, int page, int size) {
-        log.debug("Searching users by email: email='{}', page={}, size={}", email, page, size);
+        log.debug("action=search_users_by_email, query={}, page={}, size={}", email, page, size);
         return accountClient.searchAccountsByEmail(email, page, size);
     }
 }

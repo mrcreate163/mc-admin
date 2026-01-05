@@ -568,16 +568,25 @@ docker run -d \
 - Используйте `UserInfoFormatter` для форматирования информации о пользователе
 - Используйте константы из `BotConstants` вместо magic numbers
 
-### Паттерны проекта (v2.3)
+### Паттерны и практики проекта (v2.3)
+
+**Паттерны проектирования:**
 
 | Паттерн | Применение |
 |---------|------------|
 | **Chain of Responsibility** | `CallbackHandler` для обработки callback queries |
 | **Factory** | `TelegramMessageFactory` для создания сообщений |
-| **State Machine** | Управление диалогами через `ConversationStateService` |
+| **Template Method** | `BaseCommandHandler`, `StatefulCommandHandler` |
+| **Builder** | Lombok `@Builder` для сущностей и DTO |
+
+**Архитектурные паттерны:**
+
+| Паттерн | Применение |
+|---------|------------|
 | **Repository** | Доступ к данным через Spring Data JPA |
 | **Service Layer** | Бизнес-логика в `*Service` классах |
-| **Template Method** | `BaseCommandHandler`, `StatefulCommandHandler` |
+| **State Machine** | Управление диалогами через `ConversationStateService` |
+| **DTO** | Передача данных между слоями |
 
 ### Структура коммитов
 

@@ -237,7 +237,7 @@ public class SearchCommandHandler extends StatefulCommandHandler {
                     BotMessage.escapeHtml(user.getLastName() != null ? user.getLastName() : BotMessage.STATUS_UNKNOWN.raw()),
                     BotMessage.escapeHtml(user.getEmail()),
                     user.getId(),
-                    user.getIsBlocked() ? "🔴 Заблокирован" : "🟢 Активен"
+                    user.getIsBlocked() ? BotMessage.STATUS_BLOCKED.raw() : BotMessage.STATUS_ACTIVE.raw()
             ));
 
             // Разделитель между пользователями

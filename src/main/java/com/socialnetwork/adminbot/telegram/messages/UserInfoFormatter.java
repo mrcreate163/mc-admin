@@ -46,7 +46,7 @@ public final class UserInfoFormatter {
         return BotMessage.USER_INFO_TITLE.raw() + "\n\n" +
                 BotMessage.USER_INFO_ID.format(user.getId()) + "\n" +
                 BotMessage.USER_INFO_EMAIL_2.format(safeEmail) + "\n" +
-                "👤 Имя: " + safeFirstName + " " + safeLastName + "\n" +
+                BotMessage.USER_INFO_NAME.format(safeFirstName, safeLastName) + "\n" +
                 BotMessage.USER_INFO_PHONE.format(safePhone) + "\n" +
                 BotMessage.USER_INFO_COUNTRY.format(safeCountry) + "\n" +
                 BotMessage.USER_INFO_CITY.format(safeCity) + "\n" +

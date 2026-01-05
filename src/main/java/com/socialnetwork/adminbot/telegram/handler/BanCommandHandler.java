@@ -1,5 +1,6 @@
 package com.socialnetwork.adminbot.telegram.handler;
 
+import com.socialnetwork.adminbot.constant.BotConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
@@ -19,7 +20,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Handler для команды бана пользователя с подтверждением через State Machine
+ * Handler для команды бана пользователя с подтверждением через State Machine.
+ * Поддерживает многошаговый flow: выбор причины -&gt; подтверждение -&gt; выполнение.
+ *
+ * @since 1.0
  */
 @Slf4j
 @Component
@@ -134,12 +138,13 @@ public class BanCommandHandler extends StatefulCommandHandler {
     }
 
     /**
-     * Обработка ввода причины бана
+     * Обработка ввода причины бана.
      */
     private SendMessage handleBanReasonInput(Message message, Long adminId, ConversationState state) {
         String reason = message.getText().trim();
 
-        if (reason.isEmpty() || reason.length() > 500) {
+        if (reason.length() < BotConstants.MIN_BAN_REASON_LENGTH ||
+                reason.length() > BotConstants.MAX_BAN_REASON_LENGTH) {
             return createMessage(message.getChatId(),
                     BotMessage.LIMIT_FOR_REASON.raw());
         }
@@ -160,7 +165,7 @@ public class BanCommandHandler extends StatefulCommandHandler {
                     BotMessage.ACCEPT_TO_BLOCK.raw(),
                     BotMessage.USER_INFO_EMAIL.format(targetUserEmail),
                     BotMessage.USER_INFO_ID.format(targetUserIdStr),
-                    BotMessage.BAN_REASON.format(escapeHtml(reason)),
+                    BotMessage.BAN_REASON.format(BotMessage.escapeHtml(reason)),
                     BotMessage.ACCEPT_TO_BLOCK_2.raw());
 
             SendMessage response = createMessage(message.getChatId(), confirmationText);
@@ -217,7 +222,7 @@ public class BanCommandHandler extends StatefulCommandHandler {
                             BotMessage.BAN_SUCCESS_2.raw(),
                             BotMessage.USER_INFO_EMAIL.format(targetUserEmail),
                             BotMessage.USER_INFO_ID.format(targetUserId),
-                            BotMessage.BAN_REASON.format(escapeHtml(reason))));
+                            BotMessage.BAN_REASON.format(BotMessage.escapeHtml(reason))));
 
         } catch (Exception e) {
             log.error("Error executing ban: {}", e.getMessage(), e);
@@ -271,12 +276,4 @@ public class BanCommandHandler extends StatefulCommandHandler {
         }
     }
 
-    /**
-     * Экранирование HTML для Telegram
-     */
-    private String escapeHtml(String text) {
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-    }
 }

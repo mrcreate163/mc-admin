@@ -1,5 +1,6 @@
 package com.socialnetwork.adminbot.telegram.handler.callback;
 
+import com.socialnetwork.adminbot.constant.BotConstants;
 import com.socialnetwork.adminbot.domain.BotState;
 import com.socialnetwork.adminbot.domain.ConversationState;
 import com.socialnetwork.adminbot.domain.StateDataKey;
@@ -124,14 +125,14 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
      * Обработка выбора причины бана из клавиатуры.
      */
     private EditMessageText handleBanReasonSelection(String data, Long chatId, Integer messageId, Long adminId) {
-        String reason = data.substring("ban_reason:".length());
+        String reason = data.substring(BotConstants.CallbackPrefix.BAN_REASON.length());
 
         // Маппинг callback data -> человекочитаемая причина
         String readableReason = switch (reason) {
-            case "spam" -> "Спам";
-            case "harassment" -> "Harassment";
-            case "bot" -> "Bot/Fake аккаунт";
-            case "violation" -> "Нарушение правил сообщества";
+            case "spam" -> BotConstants.BanReasons.SPAM;
+            case "harassment" -> BotConstants.BanReasons.HARASSMENT;
+            case "bot" -> BotConstants.BanReasons.BOT_FAKE;
+            case "violation" -> BotConstants.BanReasons.COMMUNITY_VIOLATION;
             default -> reason;
         };
 

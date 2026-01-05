@@ -6,6 +6,7 @@ import com.socialnetwork.adminbot.service.AuditLogService;
 import com.socialnetwork.adminbot.service.InviteService;
 import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
+import com.socialnetwork.adminbot.telegram.messages.TelegramMessageFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -177,13 +178,14 @@ public class StartCommandHandler {
     }
 
     /**
-     * Создать SendMessage с HTML форматированием
+     * Создать SendMessage с HTML форматированием.
+     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
+     *
+     * @param chatId ID чата
+     * @param text текст сообщения
+     * @return настроенный объект SendMessage
      */
     private SendMessage createMessage(Long chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.toString());
-        message.setText(text);
-        message.setParseMode("HTML");
-        return message;
+        return TelegramMessageFactory.createHtmlMessage(chatId, text);
     }
 }

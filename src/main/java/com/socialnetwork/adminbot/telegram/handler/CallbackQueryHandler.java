@@ -2,6 +2,7 @@ package com.socialnetwork.adminbot.telegram.handler;
 
 import com.socialnetwork.adminbot.telegram.handler.callback.CallbackHandler;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
+import com.socialnetwork.adminbot.telegram.messages.TelegramMessageFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -50,11 +51,11 @@ public class CallbackQueryHandler {
             }
 
             // Если обработчик не найден
-            return createErrorMessage(chatId, messageId, BotMessage.ERROR_UNKNOWN_ACTION.raw());
+            return TelegramMessageFactory.createErrorEditMessage(chatId, messageId, BotMessage.ERROR_UNKNOWN_ACTION.raw());
 
         } catch (Exception e) {
             log.error("Error handling callback: {}", e.getMessage(), e);
-            return createErrorMessage(chatId, messageId, e.getMessage());
+            return TelegramMessageFactory.createErrorEditMessage(chatId, messageId, e.getMessage());
         }
     }
 
@@ -70,17 +71,5 @@ public class CallbackQueryHandler {
         answer.setCallbackQueryId(callbackQueryId);
         answer.setText(text);
         return answer;
-    }
-
-    /**
-     * Создаёт сообщение об ошибке.
-     */
-    private EditMessageText createErrorMessage(Long chatId, Integer messageId, String error) {
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(BotMessage.ERROR_GENERIC.format(error));
-        message.setParseMode("HTML");
-        return message;
     }
 }

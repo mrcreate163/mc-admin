@@ -1,10 +1,12 @@
 package com.socialnetwork.adminbot.telegram.handler.callback;
 
 import com.socialnetwork.adminbot.dto.AccountDto;
+import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import com.socialnetwork.adminbot.telegram.messages.BotMessage;
 import com.socialnetwork.adminbot.telegram.messages.TelegramMessageFactory;
 import com.socialnetwork.adminbot.telegram.messages.UserInfoFormatter;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 /**
  * Базовый абстрактный класс для обработчиков callback-запросов.
@@ -36,6 +38,19 @@ public abstract class BaseCallbackHandler implements CallbackHandler {
      */
     protected EditMessageText createMessage(Long chatId, Integer messageId, String text) {
         return TelegramMessageFactory.createHtmlEditMessage(chatId, messageId, text);
+    }
+
+    /**
+     * Создаёт простое сообщение с текстом и кнопками для взаимодействия.
+     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
+     *
+     * @param chatId    ID чата
+     * @param messageId ID сообщения
+     * @param text      текст сообщения
+     * @return EditMessageText с текстом
+     */
+    protected EditMessageText createMessage(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboardBuilder) {
+        return TelegramMessageFactory.createHtmlEditMessageWithKeyBoard(chatId, messageId, text,  keyboardBuilder);
     }
 
     /**

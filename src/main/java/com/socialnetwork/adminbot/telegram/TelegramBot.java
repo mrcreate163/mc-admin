@@ -162,7 +162,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 log.error("❌ Telegram will REJECT this message!");
 
                 // Отправить fallback сообщение
-                SendMessage errorMsg = createMessage(message.getChatId(),
+                SendMessage errorMsg = TelegramMessageFactory.createErrorMessage(message.getChatId(),
                         "❌ Результаты слишком большие для отображения. Уточните поиск.");
                 execute(errorMsg);
                 return;
@@ -195,7 +195,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             // Попытка отправить уведомление пользователю об ошибке
             try {
-                SendMessage errorNotification = createMessage(message.getChatId(),
+                SendMessage errorNotification = TelegramMessageFactory.createErrorMessage(message.getChatId(),
                         "❌ Ошибка при отправке сообщения.\n" +
                                 "Код ошибки: " + (e instanceof org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
                                 ? ((org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException) e).getErrorCode()
@@ -222,7 +222,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         if (text.startsWith("/cancel")) {
             conversationStateService.resetToIdle(userId);
-            return createMessage(message.getChatId(),
+            return TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                     "✅ Текущее действие отменено. Вы вернулись в главное меню.");
         }
 
@@ -230,7 +230,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         BotState currentState = conversationStateService.getCurrentState(userId);
         if (currentState != BotState.IDLE) {
             // Пользователь в диалоге, но вводит новую команду
-            return createMessage(message.getChatId(),
+            return TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                     "⚠️ У вас есть незавершённое действие. " +
                             "Используйте /cancel для отмены или продолжите текущее действие.");
         }
@@ -249,7 +249,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else if (text.startsWith("/addadmin")) {
             return addAdminCommandHandler.handle(message, userId);
         } else {
-            return createMessage(message.getChatId(),
+            return TelegramMessageFactory.createErrorMessage(message.getChatId(),
                     BotMessage.ERROR_UNKNOWN_COMMAND.raw());
         }
     }
@@ -301,17 +301,5 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error("Error sending unauthorized message: {}", e.getMessage(), e);
         }
-    }
-
-    /**
-     * Создать SendMessage с HTML форматированием.
-     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
-     *
-     * @param chatId ID чата
-     * @param text текст сообщения
-     * @return настроенный объект SendMessage
-     */
-    private SendMessage createMessage(Long chatId, String text) {
-        return TelegramMessageFactory.createHtmlMessage(chatId, text);
     }
 }

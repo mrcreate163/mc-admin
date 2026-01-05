@@ -54,24 +54,24 @@ public class TextMessageHandler {
                 break;
 
             case AWAITING_ADMIN_TELEGRAM_ID:
-                response = createTemporaryMessage(message.getChatId(),
-                        "Admin management handler coming soon in v2.0");
+                response = TelegramMessageFactory.createHtmlMessage(message.getChatId(),
+                        "⚠️ Admin management handler coming soon in v2.0");
                 break;
 
             case AWAITING_ADMIN_USERNAME:
                 // New invite-based admin flow - handled by AddAdminCommandHandler
-                response = createMessage(message.getChatId(),
+                response = TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                         "⚠️ Пожалуйста, используйте кнопки для выбора роли или отмены.");
                 break;
 
             case AWAITING_ADMIN_ROLE:
-                response = createMessage(message.getChatId(),
+                response = TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                         "⚠️ Пожалуйста, используйте кнопки для выбора роли.");
                 break;
 
             case CONFIRMING_ADMIN_INVITE_CREATION:
             case CONFIRMING_INVITE_ACCEPTANCE:
-                response = createMessage(message.getChatId(),
+                response = TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                         "⚠️ Пожалуйста, используйте кнопки для подтверждения или отмены.");
                 break;
 
@@ -81,7 +81,7 @@ public class TextMessageHandler {
 
             default:
                 log.warn("Unhandled state: {} for user {}", currentState, adminId);
-                response = createMessage(message.getChatId(),
+                response = TelegramMessageFactory.createErrorMessage(message.getChatId(),
                         BotMessage.ERROR_UNKNOWN_STATE.raw());
         }
 
@@ -100,13 +100,12 @@ public class TextMessageHandler {
         return response;
     }
 
-
     /**
      * Обработка сообщения в состоянии IDLE
      * Пользователь не в диалоге, отправляем справку
      */
     private SendMessage handleIdleState(Message message) {
-        return createMessage(message.getChatId(),
+        return TelegramMessageFactory.createHtmlMessage(message.getChatId(),
                 BotMessage.ERROR_UNKNOWN_COMMAND.raw());
     }
 
@@ -121,22 +120,6 @@ public class TextMessageHandler {
             return searchCommandHandler.processSearchQuery(chatId, adminId, text);
         }
 
-        return createMessage(chatId, BotMessage.NAVIGATION_HINT.raw());
-    }
-
-    /**
-     * Создать SendMessage с HTML форматированием.
-     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
-     *
-     * @param chatId ID чата
-     * @param text текст сообщения
-     * @return настроенный объект SendMessage
-     */
-    private SendMessage createMessage(Long chatId, String text) {
-        return TelegramMessageFactory.createHtmlMessage(chatId, text);
-    }
-
-    private SendMessage createTemporaryMessage(Long chatId, String text) {
-        return createMessage(chatId, "⚠️ " + text);
+        return TelegramMessageFactory.createHtmlMessage(chatId, BotMessage.NAVIGATION_HINT.raw());
     }
 }

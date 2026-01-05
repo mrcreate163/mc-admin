@@ -73,31 +73,19 @@ public class NavigationCallbackHandler extends BaseCallbackHandler {
                 BotMessage.STATS_TOTAL_ADMINS.format(stats.getTotalAdmins())
         );
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(text);
-        message.setParseMode("HTML");
-        message.setReplyMarkup(KeyboardBuilder.buildMainMenuKeyboard());
-
-        return message;
+        return createMessage(chatId, messageId, text, KeyboardBuilder.buildMainMenuKeyboard());
     }
 
     /**
      * Вернуться в главное меню.
      */
     private EditMessageText handleMainMenu(Long chatId, Integer messageId) {
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(String.join("\n\n",
-                BotMessage.MAIN_MENU_TITLE.raw(),
-                BotMessage.MAIN_MENU_SUBTITLE.raw()
-        ));
-        message.setParseMode("HTML");
-        message.setReplyMarkup(KeyboardBuilder.buildMainMenuKeyboard());
-
-        return message;
+        return createMessage(chatId,
+                messageId,
+                String.join("\n\n",
+                        BotMessage.MAIN_MENU_TITLE.raw(),
+                        BotMessage.MAIN_MENU_SUBTITLE.raw()),
+                        KeyboardBuilder.buildMainMenuKeyboard());
     }
 
     /**
@@ -106,15 +94,11 @@ public class NavigationCallbackHandler extends BaseCallbackHandler {
     private EditMessageText handleUserStats(String data, Long chatId, Integer messageId) {
         UUID userId = UUID.fromString(data.substring("stats:".length()));
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(String.join("\n\n",
-                BotMessage.STATS_USER_TITLE.format(userId),
-                BotMessage.STATS_USER_COMING_SOON.raw()
-        ));
-        message.setParseMode("HTML");
-
-        return message;
+        return createMessage(chatId,
+                messageId,
+                String.join("\n\n",
+                        BotMessage.STATS_USER_TITLE.format(userId),
+                        BotMessage.STATS_USER_COMING_SOON.raw()
+                ));
     }
 }

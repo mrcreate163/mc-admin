@@ -83,14 +83,7 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
             int newPage = Integer.parseInt(data.substring("search_page:".length()));
             SendMessage result = searchCommandHandler.handlePageNavigation(chatId, adminId, newPage);
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(result.getText());
-            message.setParseMode("HTML");
-            message.setReplyMarkup((InlineKeyboardMarkup) result.getReplyMarkup());
-
-            return message;
+            return createMessage(chatId, messageId, result.getText(), (InlineKeyboardMarkup) result.getReplyMarkup());
         } catch (NumberFormatException e) {
             log.error("Invalid page number in callback: {}", data);
             return createErrorMessage(chatId, messageId, "⚠️ Некорректный номер страницы");
@@ -116,14 +109,11 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
             // Формируем детальную информацию
             String text = formatUserDetails(user);
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(text);
-            message.setParseMode("HTML");
-            message.setReplyMarkup(KeyboardBuilder.buildUserActionsKeyboard(userId, user.getIsBlocked()));
-
-            return message;
+            return createMessage(
+                    chatId,
+                    messageId,
+                    text,
+                    KeyboardBuilder.buildUserActionsKeyboard(userId, user.getIsBlocked()));
         } catch (IllegalArgumentException e) {
             log.error("Invalid user ID in search_view callback: {}, error: {}", data, e.getMessage());
             return createErrorMessage(chatId, messageId, "⚠️ Неверный ID пользователя");
@@ -173,14 +163,7 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
             // Показываем клавиатуру с причинами бана
             String text = formatUserDetails(user);
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(text);
-            message.setParseMode("HTML");
-            message.setReplyMarkup(KeyboardBuilder.buildBanReasonsKeyboard());
-
-            return message;
+            return createMessage(chatId, messageId, text, KeyboardBuilder.buildBanReasonsKeyboard());
 
         } catch (IllegalArgumentException e) {
             log.error("Invalid user ID in search_ban callback: {}, error: {}", data, e.getMessage());
@@ -228,13 +211,7 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
             // Сбрасываем состояние поиска
             conversationStateService.resetToIdle(adminId);
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(text);
-            message.setParseMode("HTML");
-
-            return message;
+            return createMessage(chatId,messageId,text);
 
         } catch (IllegalArgumentException e) {
             log.error("Invalid user ID in search_unban callback: {}", data);
@@ -255,13 +232,7 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
 
         log.info("User {} started new search", adminId);
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(BotMessage.SEARCH_PROMPT.raw());
-        message.setParseMode("HTML");
-
-        return message;
+        return createMessage(chatId,messageId, BotMessage.SEARCH_PROMPT.raw());
     }
 
     /**
@@ -270,12 +241,6 @@ public class SearchCallbackHandler extends BaseCallbackHandler {
     private EditMessageText handleSearchCancel(Long chatId, Integer messageId, Long adminId) {
         SendMessage result = searchCommandHandler.cancelSearch(chatId, adminId);
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(result.getText());
-        message.setParseMode("HTML");
-
-        return message;
+        return createMessage(chatId, messageId, result.getText());
     }
 }

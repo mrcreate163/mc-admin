@@ -1,7 +1,10 @@
 package com.socialnetwork.adminbot.telegram.messages;
 
+import com.socialnetwork.adminbot.constant.BotConstants;
+import com.socialnetwork.adminbot.telegram.keyboard.KeyboardBuilder;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 /**
  * Фабрика для создания Telegram сообщений.
@@ -12,7 +15,7 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageTe
  */
 public final class TelegramMessageFactory {
 
-    private static final String PARSE_MODE_HTML = "HTML";
+
 
     private TelegramMessageFactory() {
         throw new UnsupportedOperationException("Utility class");
@@ -29,7 +32,7 @@ public final class TelegramMessageFactory {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
-        message.setParseMode(PARSE_MODE_HTML);
+        message.setParseMode(BotConstants.PARSE_MODE_HTML);
         return message;
     }
 
@@ -46,7 +49,22 @@ public final class TelegramMessageFactory {
         message.setChatId(chatId.toString());
         message.setMessageId(messageId);
         message.setText(text);
-        message.setParseMode(PARSE_MODE_HTML);
+        message.setParseMode(BotConstants.PARSE_MODE_HTML);
+        return message;
+    }
+
+    /**
+     * Создаёт EditMessageText с HTML форматированием и кнопками для взаимодействия.
+     *
+     * @param chatId    ID чата
+     * @param messageId ID сообщения для редактирования
+     * @param text      текст сообщения
+     * @param keyboardBuilder готовая клавиатура
+     * @return настроенный объект EditMessageText
+     */
+    public static EditMessageText createHtmlEditMessageWithKeyBoard(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboardBuilder) {
+        EditMessageText message = createHtmlEditMessage(chatId, messageId, text);
+        message.setReplyMarkup(keyboardBuilder);
         return message;
     }
 

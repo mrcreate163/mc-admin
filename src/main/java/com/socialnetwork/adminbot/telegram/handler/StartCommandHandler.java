@@ -83,7 +83,7 @@ public class StartCommandHandler {
                     BotMessage.AVAILABLE_COMMANDS.raw()
             );
 
-            SendMessage response = createMessage(chatId, welcomeText);
+            SendMessage response = TelegramMessageFactory.createHtmlMessage(chatId, welcomeText);
             response.setReplyMarkup(KeyboardBuilder.buildMainMenuKeyboard());
 
             return response;
@@ -97,7 +97,7 @@ public class StartCommandHandler {
                     BotMessage.CONTACT_SUPER_ADMIN.raw()
             );
 
-            return createMessage(chatId, unauthorizedText);
+            return TelegramMessageFactory.createHtmlMessage(chatId, unauthorizedText);
         }
     }
 
@@ -123,7 +123,7 @@ public class StartCommandHandler {
             // Проверяем, не активирован ли уже этот пользователь
             if (adminService.isAdmin(telegramId)) {
                 log.warn("Already registered admin tried to use invite link: {}", telegramId);
-                return createMessage(chatId, BotMessage.ERROR_ALREADY_ADMIN.raw());
+                return TelegramMessageFactory.createHtmlMessage(chatId, BotMessage.ERROR_ALREADY_ADMIN.raw());
             }
 
             // Получаем данные пользователя из Telegram
@@ -156,7 +156,7 @@ public class StartCommandHandler {
                     BotMessage.AVAILABLE_COMMANDS.raw()
             );
 
-            SendMessage response = createMessage(chatId, successText);
+            SendMessage response = TelegramMessageFactory.createHtmlMessage(chatId, successText);
             response.setReplyMarkup(KeyboardBuilder.buildMainMenuKeyboard());
 
             return response;
@@ -165,7 +165,7 @@ public class StartCommandHandler {
             // Ошибка валидации токена (невалидный, истёк, или уже использован)
             log.warn("Invalid invite token: {}, error: {}", inviteToken, e.getMessage());
 
-            return createMessage(chatId,
+            return TelegramMessageFactory.createHtmlMessage(chatId,
                     "❌ <b>Ошибка активации</b>\n\n" + e.getMessage());
 
         } catch (Exception e) {
@@ -173,19 +173,7 @@ public class StartCommandHandler {
             log.error("Error during invite registration: token={}, error={}",
                     inviteToken, e.getMessage(), e);
 
-            return createMessage(chatId, BotMessage.ERROR_REGISTRATION_FAILED.raw());
+            return TelegramMessageFactory.createHtmlMessage(chatId, BotMessage.ERROR_REGISTRATION_FAILED.raw());
         }
-    }
-
-    /**
-     * Создать SendMessage с HTML форматированием.
-     * Делегирует вызов к TelegramMessageFactory для устранения дублирования.
-     *
-     * @param chatId ID чата
-     * @param text текст сообщения
-     * @return настроенный объект SendMessage
-     */
-    private SendMessage createMessage(Long chatId, String text) {
-        return TelegramMessageFactory.createHtmlMessage(chatId, text);
     }
 }

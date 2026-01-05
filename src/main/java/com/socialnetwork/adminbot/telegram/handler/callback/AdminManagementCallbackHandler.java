@@ -66,14 +66,7 @@ public class AdminManagementCallbackHandler extends BaseCallbackHandler {
         // Отмена
         if ("cancel".equals(action)) {
             String cancelMessage = addAdminCommandHandler.cancelAddAdmin(adminId);
-
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(cancelMessage);
-            message.setParseMode("HTML");
-
-            return message;
+            return createMessage(chatId, messageId, cancelMessage);
         }
 
         // Выбор роли
@@ -84,15 +77,7 @@ public class AdminManagementCallbackHandler extends BaseCallbackHandler {
                 AdminRole selectedRole = AdminRole.valueOf(roleName);
                 String responseText = addAdminCommandHandler.handleRoleSelection(adminId, selectedRole);
 
-                // Создаем сообщение со ссылкой (без клавиатуры, т.к. ссылка одноразовая)
-                EditMessageText message = new EditMessageText();
-                message.setChatId(chatId.toString());
-                message.setMessageId(messageId);
-                message.setText(responseText);
-                message.setParseMode("HTML");
-                message.setReplyMarkup(null); // Убираем клавиатуру после генерации ссылки
-
-                return message;
+                return createMessage(chatId, messageId, responseText);
 
             } catch (IllegalArgumentException e) {
                 log.error("Invalid role name: {}", roleName, e);

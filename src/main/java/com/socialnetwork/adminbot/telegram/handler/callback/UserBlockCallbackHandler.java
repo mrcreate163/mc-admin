@@ -106,14 +106,7 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
                     BotMessage.CHOOSE_REASON.raw()
             );
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(text);
-            message.setParseMode("HTML");
-            message.setReplyMarkup(KeyboardBuilder.buildBanReasonsKeyboard());
-
-            return message;
+            return createMessage(chatId, messageId, text, KeyboardBuilder.buildBanReasonsKeyboard());
 
         } catch (IllegalArgumentException e) {
             log.error("Invalid user ID in callback: {}, error: {}", data, e.getMessage());
@@ -159,14 +152,7 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
                     BotMessage.ACCEPT_TO_BLOCK_2.raw()
             );
 
-            EditMessageText message = new EditMessageText();
-            message.setChatId(chatId.toString());
-            message.setMessageId(messageId);
-            message.setText(confirmationText);
-            message.setParseMode("HTML");
-            message.setReplyMarkup(KeyboardBuilder.buildConfirmationKeyboard("ban"));
-
-            return message;
+            return createMessage(chatId, messageId, confirmationText, KeyboardBuilder.buildConfirmationKeyboard("ban"));
 
         } catch (Exception e) {
             log.error("Error processing ban reason selection: {}", e.getMessage(), e);
@@ -181,13 +167,7 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
     private EditMessageText handleBanConfirm(Long chatId, Integer messageId, Long adminId) {
         SendMessage result = banCommandHandler.executeBan(chatId, adminId);
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(result.getText());
-        message.setParseMode("HTML");
-
-        return message;
+        return createMessage(chatId, messageId, result.getText());
     }
 
     /**
@@ -196,13 +176,7 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
     private EditMessageText handleBanCancel(Long chatId, Integer messageId, Long adminId) {
         SendMessage result = banCommandHandler.cancelBan(chatId, adminId);
 
-        EditMessageText message = new EditMessageText();
-        message.setChatId(chatId.toString());
-        message.setMessageId(messageId);
-        message.setText(result.getText());
-        message.setParseMode("HTML");
-
-        return message;
+        return createMessage(chatId, messageId, result.getText());
     }
 
     /**
@@ -221,6 +195,6 @@ public class UserBlockCallbackHandler extends BaseCallbackHandler {
         message.setText(BotMessage.UNBAN_CALLBACK_SUCCESS.format(userId));
         message.setParseMode("HTML");
 
-        return message;
+        return createMessage(chatId, messageId, BotMessage.UNBAN_CALLBACK_SUCCESS.format(userId));
     }
 }

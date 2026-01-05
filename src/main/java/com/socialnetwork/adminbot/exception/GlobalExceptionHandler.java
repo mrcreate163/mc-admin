@@ -108,6 +108,27 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(TokenGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleTokenGeneration(
+            TokenGenerationException e,
+            WebRequest request
+    ) {
+        log.error("Token generation failed at {}: {} (attempts: {})",
+                request.getDescription(false),
+                e.getMessage(),
+                e.getAttemptsMade(),
+                e);
+
+        // Это внутренняя ошибка сервера
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(
+                        false,
+                        "Failed to create invitation due to server error. Please try again later.",
+                        HttpStatus.INTERNAL_SERVER_ERROR.value()
+                ));
+    }
+
 
     /**
      * Вспомогательный метод для построения единообразного формата ошибок

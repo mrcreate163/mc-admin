@@ -2,6 +2,7 @@ package com.socialnetwork.adminbot.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -79,6 +80,34 @@ public class GlobalExceptionHandler {
                         HttpStatus.INTERNAL_SERVER_ERROR.value()
                 ));
     }
+
+    /**
+     * Обработка превышения Rate Limit.
+     * Возвращает 429 Too Many Requests с заголовком Retry-After.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimitExceeded(
+            RateLimitExceededException e,
+            WebRequest request
+    ) {
+        log.warn("Rate limit exceeded at {}: {}",
+                request.getDescription(false),
+                e.getMessage());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Retry-After", String.valueOf(e.getRetryAfterSeconds()));
+        headers.add("X-Rate-Limit-Retry-After-Seconds", String.valueOf(e.getRetryAfterSeconds()));
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .headers(headers)
+                .body(buildErrorResponse(
+                        false,
+                        e.getMessage(),
+                        HttpStatus.TOO_MANY_REQUESTS.value()
+                ));
+    }
+
 
     /**
      * Вспомогательный метод для построения единообразного формата ошибок

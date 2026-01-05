@@ -2,8 +2,14 @@ package com.socialnetwork.adminbot.controller;
 
 import com.socialnetwork.adminbot.entity.Admin;
 import com.socialnetwork.adminbot.entity.AdminInvitation;
+import com.socialnetwork.adminbot.exception.RateLimitExceededException;
 import com.socialnetwork.adminbot.service.AuditLogService;
 import com.socialnetwork.adminbot.service.InviteService;
+import com.socialnetwork.adminbot.service.RateLimitService;
+import com.socialnetwork.adminbot.util.HttpRequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,6 +37,7 @@ public class AdminRegistrationController {
 
     private final InviteService inviteService;
     private final AuditLogService auditLogService;
+    private final RateLimitService rateLimitService;
 
     /**
      * Активация администратора по пригласительному токену
@@ -47,7 +54,16 @@ public class AdminRegistrationController {
      * @return информация об активированном администраторе
      */
     @PostMapping("/register")
-    public ResponseEntity<?> registerAdmin(@RequestBody RegistrationRequest request) {
+    public ResponseEntity<?> registerAdmin(@RequestBody RegistrationRequest request,
+                                           HttpServletRequest httpRequest) {
+
+        // Проверка Rate Limit
+        String clientIp = HttpRequestUtils.getClientIpAddress(httpRequest);
+        String rateLimitKey = "rate_limit:register:" + clientIp;
+
+        if (!rateLimitService.tryConsume(rateLimitKey, RateLimitService::registrationLimitConfig)) {
+            throw new RateLimitExceededException(3600); // retry after 1 hour
+        }
         log.info("Registration attempt: token={}, telegramId={}",
                 request.getToken(), request.getTelegramId());
 
@@ -115,7 +131,16 @@ public class AdminRegistrationController {
      * @return информация о валидности токена
      */
     @GetMapping("/invite/validate")
-    public ResponseEntity<?> validateInviteToken(@RequestParam("token") String token) {
+    public ResponseEntity<?> validateInviteToken(@RequestParam("token") String token,
+                                                 HttpServletRequest httpRequest) {
+
+        // Проверка Rate Limit
+        String clientIp = HttpRequestUtils.getClientIpAddress(httpRequest);
+        String rateLimitKey = "rate_limit:validate:" + clientIp;
+
+        if (!rateLimitService.tryConsume(rateLimitKey, RateLimitService::validationLimitConfig)) {
+            throw new RateLimitExceededException(60); // retry after 1 minute
+        }
         log.debug("Validating invite token: {}", token);
 
         if (token == null || token.isBlank()) {
@@ -167,8 +192,8 @@ public class AdminRegistrationController {
     /**
      * DTO для запроса регистрации
      */
-    @lombok.Data
-    @lombok.NoArgsConstructor
+    @Data
+    @NoArgsConstructor
     public static class RegistrationRequest {
         private String token;
         private Long telegramId;
